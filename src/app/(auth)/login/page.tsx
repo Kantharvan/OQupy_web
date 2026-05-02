@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { t } from "@/styles/tokens";
 
 type Tab = "phone" | "email";
 
@@ -29,14 +30,6 @@ export default function LoginPage() {
     setLoading(true);
     try {
       // TODO: replace with real API call once backend is ready
-      // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ email, password }),
-      // });
-      // const data = await res.json();
-      // if (!res.ok) throw new Error(data.message ?? "Login failed");
-      // store token, redirect by role
       console.log("email login", email);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -46,29 +39,27 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4">
+    <main className={`min-h-screen ${t.page} flex flex-col items-center justify-center px-4`}>
       {/* Logo */}
       <div className="mb-8 text-center">
-        <h1 className="text-5xl font-black tracking-widest text-[#f97316] uppercase">
+        <h1 className={`text-5xl font-black tracking-widest ${t.brandText} uppercase`}>
           OQupy
         </h1>
-        <p className="mt-2 text-[#a1a1aa] text-base">The floor is yours.</p>
+        <p className={`mt-2 ${t.textSecondary} text-base`}>The floor is yours.</p>
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-sm bg-[#141414] border border-[#27272a] rounded-2xl p-8">
-        <h2 className="text-xl font-semibold text-white text-center mb-5">
+      <div className={`w-full max-w-sm ${t.cardBox} p-8`}>
+        <h2 className={`text-xl font-semibold ${t.textPrimary} text-center mb-5`}>
           Sign in to continue
         </h2>
 
         {/* Tabs */}
-        <div className="flex bg-[#1a1a1a] rounded-xl p-1 mb-6">
+        <div className={`flex ${t.input} rounded-xl p-1 mb-6`}>
           <button
             onClick={() => { setTab("phone"); setError(""); }}
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === "phone"
-                ? "bg-[#c2410c] text-white"
-                : "text-[#71717a] hover:text-white"
+              tab === "phone" ? "bg-brand-btn text-white" : `${t.textMuted} hover:text-white`
             }`}
           >
             Phone / OTP
@@ -76,9 +67,7 @@ export default function LoginPage() {
           <button
             onClick={() => { setTab("email"); setError(""); }}
             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === "email"
-                ? "bg-[#c2410c] text-white"
-                : "text-[#71717a] hover:text-white"
+              tab === "email" ? "bg-brand-btn text-white" : `${t.textMuted} hover:text-white`
             }`}
           >
             Email / Password
@@ -88,21 +77,18 @@ export default function LoginPage() {
         {/* Phone OTP tab */}
         {tab === "phone" && (
           <form onSubmit={handleSendOTP} className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 bg-[#1a1a1a] border border-[#3f3f46] rounded-xl px-4 h-12 focus-within:border-[#f97316] transition-colors">
-              <span className="text-[#a1a1aa] text-sm font-medium shrink-0">+91</span>
-              <div className="w-px h-5 bg-[#3f3f46]" />
+            <div className={`flex items-center gap-2 ${t.input} ${t.border} border rounded-xl px-4 h-12 focus-within:border-brand transition-colors`}>
+              <span className={`${t.textSecondary} text-sm font-medium shrink-0`}>+91</span>
+              <div className={`w-px h-5 ${t.input}`} />
               <input
                 type="tel"
                 placeholder="Enter your phone number"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                className="flex-1 bg-transparent text-white placeholder-[#71717a] text-sm outline-none"
+                className={`flex-1 bg-transparent ${t.textPrimary} placeholder:${t.textMuted} text-sm outline-none`}
               />
             </div>
-            <button
-              type="submit"
-              className="w-full h-12 bg-[#c2410c] hover:bg-[#9a3412] active:bg-[#7c2d12] text-white font-semibold rounded-xl transition-colors"
-            >
+            <button type="submit" className={`w-full h-12 ${t.btnPrimary}`}>
               Send OTP
             </button>
           </form>
@@ -116,27 +102,21 @@ export default function LoginPage() {
               placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full h-12 bg-[#1a1a1a] border border-[#3f3f46] rounded-xl px-4 text-white placeholder-[#71717a] text-sm outline-none focus:border-[#f97316] transition-colors"
+              className={`w-full h-12 ${t.inputField}`}
             />
             <input
               type="password"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-12 bg-[#1a1a1a] border border-[#3f3f46] rounded-xl px-4 text-white placeholder-[#71717a] text-sm outline-none focus:border-[#f97316] transition-colors"
+              className={`w-full h-12 ${t.inputField}`}
             />
-            {error && (
-              <p className="text-red-400 text-sm text-center">{error}</p>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-12 bg-[#c2410c] hover:bg-[#9a3412] active:bg-[#7c2d12] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
-            >
+            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+            <button type="submit" disabled={loading} className={`w-full h-12 ${t.btnPrimary}`}>
               {loading ? "Signing in…" : "Sign In"}
             </button>
             <div className="text-right">
-              <Link href="/forgot-password" className="text-[#71717a] hover:text-[#a1a1aa] text-xs transition-colors">
+              <Link href="/forgot-password" className={`${t.textMuted} hover:${t.textSecondary} text-xs transition-colors`}>
                 Forgot password?
               </Link>
             </div>
@@ -145,27 +125,22 @@ export default function LoginPage() {
 
         {/* Divider */}
         <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-[#27272a]" />
-          <span className="text-[#71717a] text-xs">OR</span>
-          <div className="flex-1 h-px bg-[#27272a]" />
+          <div className={t.dividerLine} />
+          <span className={`${t.textMuted} text-xs`}>OR</span>
+          <div className={t.dividerLine} />
         </div>
 
         {/* Google */}
-        <button
-          type="button"
-          className="w-full h-12 bg-white hover:bg-zinc-100 active:bg-zinc-200 text-black font-semibold rounded-xl flex items-center justify-center gap-3 transition-colors"
-        >
+        <button type="button" className={`w-full h-12 ${t.btnWhite} flex items-center justify-center gap-3`}>
           <GoogleIcon />
           Continue with Google
         </button>
       </div>
 
       {/* Register link */}
-      <p className="mt-6 text-[#a1a1aa] text-sm">
+      <p className={`mt-6 ${t.textSecondary} text-sm`}>
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="text-[#f97316] hover:text-[#fb923c] font-medium transition-colors">
-          Register
-        </Link>
+        <Link href="/register" className={`${t.link} font-medium`}>Register</Link>
       </p>
     </main>
   );

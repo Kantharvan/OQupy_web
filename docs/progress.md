@@ -13,6 +13,13 @@
 - Root `/` redirects to `/login`
 - No shadcn/ui — raw Tailwind v4 (shadcn targets Tailwind v3; incompatible)
 
+### Token system ✅
+- `src/styles/tokens.ts` — single source of truth for all Tailwind class shortcuts
+- `CLAUDE.md` updated with mandatory token usage rules and page template
+- All existing pages refactored to use `import { t } from "@/styles/tokens"` — no hardcoded hex in components
+- **To change the theme:** edit hex values in `globals.css` only
+- **To build a new page:** import `t` from `@/styles/tokens` and use `t.page`, `t.cardBox`, `t.btnPrimary`, etc.
+
 ---
 
 ## Phase 1 — Auth Flows (In Progress)
@@ -24,6 +31,7 @@
   - **Email / Password tab** — email + password fields, Sign In, Forgot password? link
   - Shared OR divider + Continue with Google button
 - [x] `src/app/(auth)/verify-otp/page.tsx` — 6-box OTP input (auto-focus, auto-advance, paste, backspace nav), 30s resend countdown, Back to Login
+- [x] Both pages use token system (`t.*` classes, no hardcoded hex)
 
 ### Backend contract (from OQupy_srv audit)
 - Auth: custom JWT (email + password) — `JWT_EXPIRES_IN=7d`, single token, Redis blacklist on logout
@@ -47,7 +55,7 @@
 | Phase | Module                 | Status         |
 |-------|------------------------|----------------|
 | 0     | Scaffold               | ✅ Done        |
-| 0.5   | Design system          | ✅ Done        |
+| 0.5   | Design system + tokens | ✅ Done        |
 | 1     | Auth flows             | 🔄 In Progress |
 | 2     | Studio discovery       | Pending        |
 | 3     | Bookings / Enroll      | Pending        |

@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { t } from "@/styles/tokens";
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
@@ -17,44 +18,29 @@ export default function VerifyOTPPage() {
   const [canResend, setCanResend] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  useEffect(() => {
-    inputRefs.current[0]?.focus();
-  }, []);
+  useEffect(() => { inputRefs.current[0]?.focus(); }, []);
 
   useEffect(() => {
     if (countdown === 0) { setCanResend(true); return; }
-    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [countdown]);
 
   const handleChange = useCallback((index: number, value: string) => {
     const digit = value.replace(/\D/g, "").slice(-1);
-    setOtp((prev) => {
-      const next = [...prev];
-      next[index] = digit;
-      return next;
-    });
-    if (digit && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    setOtp((prev) => { const next = [...prev]; next[index] = digit; return next; });
+    if (digit && index < OTP_LENGTH - 1) inputRefs.current[index + 1]?.focus();
   }, []);
 
   const handleKeyDown = useCallback((index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
+    if (e.key === "Backspace" && !otp[index] && index > 0) inputRefs.current[index - 1]?.focus();
   }, [otp]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
     const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH).split("");
-    setOtp((prev) => {
-      const next = [...prev];
-      digits.forEach((d, i) => { next[i] = d; });
-      return next;
-    });
-    const nextIndex = Math.min(digits.length, OTP_LENGTH - 1);
-    inputRefs.current[nextIndex]?.focus();
+    setOtp((prev) => { const next = [...prev]; digits.forEach((d, i) => { next[i] = d; }); return next; });
+    inputRefs.current[Math.min(digits.length, OTP_LENGTH - 1)]?.focus();
   }, []);
 
   function handleResend() {
@@ -76,23 +62,17 @@ export default function VerifyOTPPage() {
   const filled = otp.join("").length === OTP_LENGTH;
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4">
+    <main className={`min-h-screen ${t.page} flex flex-col items-center justify-center px-4`}>
       {/* Logo + subtitle */}
       <div className="mb-8 text-center">
-        <h1 className="text-5xl font-black tracking-widest text-[#f97316] uppercase">
-          OQupy
-        </h1>
-        <p className="mt-3 text-white text-base font-medium">
-          Enter the code sent to your phone
-        </p>
-        <p className="mt-1 text-[#a1a1aa] text-sm">{masked}</p>
+        <h1 className={`text-5xl font-black tracking-widest ${t.brandText} uppercase`}>OQupy</h1>
+        <p className={`mt-3 ${t.textPrimary} text-base font-medium`}>Enter the code sent to your phone</p>
+        <p className={`mt-1 ${t.textSecondary} text-sm`}>{masked}</p>
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-sm bg-[#141414] border border-[#27272a] rounded-2xl p-8">
-        <h2 className="text-xl font-semibold text-white text-center mb-6">
-          Verify OTP
-        </h2>
+      <div className={`w-full max-w-sm ${t.cardBox} p-8`}>
+        <h2 className={`text-xl font-semibold ${t.textPrimary} text-center mb-6`}>Verify OTP</h2>
 
         <form onSubmit={handleVerify} className="flex flex-col gap-5">
           {/* 6-box OTP input */}
@@ -107,32 +87,27 @@ export default function VerifyOTPPage() {
                 value={digit}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className="w-11 h-13 bg-[#1a1a1a] border border-[#3f3f46] rounded-xl text-white text-xl font-bold text-center outline-none focus:border-[#f97316] transition-colors"
+                className={`w-11 h-13 ${t.input} border ${t.borderInput} rounded-xl text-white text-xl font-bold text-center outline-none focus:border-brand transition-colors`}
               />
             ))}
           </div>
 
-          <p className="text-[#71717a] text-sm text-center">
-            Enter the 6-digit code we sent you.
-          </p>
+          <p className={`${t.textMuted} text-sm text-center`}>Enter the 6-digit code we sent you.</p>
 
-          {/* Verify button */}
-          <button
-            type="submit"
-            disabled={!filled}
-            className="w-full h-13 bg-[#c2410c] hover:bg-[#9a3412] active:bg-[#7c2d12] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
-          >
+          <button type="submit" disabled={!filled} className={`w-full h-13 ${t.btnPrimary}`}>
             Verify OTP
           </button>
         </form>
 
         {/* Resend */}
         <div className="mt-5 text-center">
-          <p className="text-[#a1a1aa] text-sm">Didn&apos;t receive the code?</p>
+          <p className={`${t.textSecondary} text-sm`}>Didn&apos;t receive the code?</p>
           <button
             onClick={handleResend}
             disabled={!canResend}
-            className="mt-1 text-sm font-medium text-[#71717a] disabled:cursor-not-allowed enabled:text-[#f97316] enabled:hover:text-[#fb923c] transition-colors"
+            className={`mt-1 text-sm font-medium transition-colors ${
+              canResend ? `${t.brandText} hover:text-[#fb923c]` : `${t.textMuted} cursor-not-allowed`
+            }`}
           >
             {canResend ? "Resend OTP" : `Resend OTP (${countdown}s)`}
           </button>
@@ -140,10 +115,7 @@ export default function VerifyOTPPage() {
       </div>
 
       {/* Back link */}
-      <Link
-        href="/login"
-        className="mt-6 flex items-center gap-1 text-[#f97316] hover:text-[#fb923c] text-sm font-medium transition-colors"
-      >
+      <Link href="/login" className={`mt-6 flex items-center gap-1 ${t.link} text-sm font-medium`}>
         ← Back to Login
       </Link>
     </main>
