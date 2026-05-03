@@ -26,12 +26,20 @@
 
 ### Completed
 - [x] `src/app/(auth)/layout.tsx` — Suspense wrapper
-- [x] `src/app/(auth)/login/page.tsx` — tabbed UI:
-  - **Phone / OTP tab** (default) — +91 phone input → Send OTP → navigates to `/verify-otp`
-  - **Email / Password tab** — email + password fields, Sign In, Forgot password? link
-  - Shared OR divider + Continue with Google button
-- [x] `src/app/(auth)/verify-otp/page.tsx` — 6-box OTP input (auto-focus, auto-advance, paste, backspace nav), 30s resend countdown, Back to Login
+- [x] `src/app/(auth)/login/page.tsx` — simplified single-flow UI:
+  - **Phone / OTP** (only flow) — +91 prefix, 10-digit input, Send OTP button disabled until exactly 10 digits entered → navigates to `/verify-otp`
+  - OR divider + Continue with Google button (stub, wired when backend ready)
+  - No email/password tab — removed (Google covers password-based users)
+  - No "Register" link — removed (post-login onboarding pattern adopted, see below)
+- [x] `src/app/(auth)/verify-otp/page.tsx` — 6-box OTP input (auto-focus, auto-advance, paste, backspace nav), 30s resend countdown, Verify button disabled until all 6 digits filled, Back to Login
 - [x] Both pages use token system (`t.*` classes, no hardcoded hex)
+
+### Post-login onboarding (replaces /register)
+- New users are detected after OTP verify or Google login via backend response (`isNewUser: true` or `user.role === null`)
+- Frontend redirects new users to `/onboarding` instead of a separate register page
+- `/onboarding` will collect: name, role selection, and any role-specific details
+- This keeps the login page minimal and registration frictionless (no pre-auth signup form)
+- **Backend requirement:** `POST /auth/verify-otp` and `POST /auth/google` responses must include `isNewUser: boolean` (or equivalent) so the frontend can branch correctly
 
 ### Backend contract (from OQupy_srv audit)
 - Auth: custom JWT (email + password) — `JWT_EXPIRES_IN=7d`, single token, Redis blacklist on logout
@@ -45,8 +53,8 @@
 - [ ] `src/context/AuthContext.tsx` — token in memory, expose `user`, `login`, `logout`
 - [ ] `src/middleware.ts` — protect routes, redirect unauthenticated to `/login`
 - [ ] Role-based redirect after login: student → `/studios`, owner → `/dashboard`, admin → `/admin`, instructor → `/dashboard`
-- [ ] `src/app/(auth)/register/page.tsx` — name, email, password, role selector (4 roles)
-- [ ] `src/app/(auth)/forgot-password/page.tsx` — email input → POST /auth/reset-password
+- [ ] `src/app/(onboarding)/page.tsx` — post-login: name, role selector (4 roles), role-specific details; shown to new users only
+- [ ] Role-based redirect after onboarding: student → `/studios`, owner → `/dashboard`, admin → `/admin`, instructor → `/dashboard`
 
 ---
 

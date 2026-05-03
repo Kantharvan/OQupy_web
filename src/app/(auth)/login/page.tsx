@@ -1,41 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { t } from "@/styles/tokens";
 
-type Tab = "phone" | "email";
-
 export default function LoginPage() {
-  const [tab, setTab] = useState<Tab>("phone");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const isReady = phone.length === 10;
 
-  async function handleSendOTP(e: React.FormEvent) {
+  function handleSendOTP(e: React.FormEvent) {
     e.preventDefault();
-    if (!phone.trim()) return;
-    setError("");
+    if (!isReady) return;
     router.push(`/verify-otp?phone=${encodeURIComponent(phone)}`);
-  }
-
-  async function handleEmailLogin(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim() || !password.trim()) return;
-    setError("");
-    setLoading(true);
-    try {
-      // TODO: replace with real API call once backend is ready
-      console.log("email login", email);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
-    }
   }
 
   return (
@@ -50,78 +27,31 @@ export default function LoginPage() {
 
       {/* Card */}
       <div className={`w-full max-w-sm ${t.cardBox} p-8`}>
-        <h2 className={`text-xl font-semibold ${t.textPrimary} text-center mb-5`}>
+        <h2 className={`text-xl font-semibold ${t.textPrimary} text-center mb-6`}>
           Sign in to continue
         </h2>
 
-        {/* Tabs */}
-        <div className={`flex ${t.input} rounded-xl p-1 mb-6`}>
-          <button
-            onClick={() => { setTab("phone"); setError(""); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === "phone" ? "bg-brand-btn text-white" : `${t.textMuted} hover:text-white`
-            }`}
-          >
-            Phone / OTP
-          </button>
-          <button
-            onClick={() => { setTab("email"); setError(""); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === "email" ? "bg-brand-btn text-white" : `${t.textMuted} hover:text-white`
-            }`}
-          >
-            Email / Password
-          </button>
-        </div>
-
-        {/* Phone OTP tab */}
-        {tab === "phone" && (
-          <form onSubmit={handleSendOTP} className="flex flex-col gap-4">
-            <div className={`flex items-center gap-2 ${t.input} ${t.border} border rounded-xl px-4 h-12 focus-within:border-brand transition-colors`}>
-              <span className={`${t.textSecondary} text-sm font-medium shrink-0`}>+91</span>
-              <div className={`w-px h-5 ${t.input}`} />
-              <input
-                type="tel"
-                placeholder="Enter your phone number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                className={`flex-1 bg-transparent ${t.textPrimary} placeholder:${t.textMuted} text-sm outline-none`}
-              />
-            </div>
-            <button type="submit" className={`w-full h-12 ${t.btnPrimary}`}>
-              Send OTP
-            </button>
-          </form>
-        )}
-
-        {/* Email/Password tab */}
-        {tab === "email" && (
-          <form onSubmit={handleEmailLogin} className="flex flex-col gap-4">
+        {/* Phone OTP form */}
+        <form onSubmit={handleSendOTP} className="flex flex-col gap-4">
+          <div className={`flex items-center gap-2 ${t.input} border ${t.borderInput} rounded-xl px-4 h-12 focus-within:border-brand transition-colors`}>
+            <span className={`${t.textSecondary} text-sm font-medium shrink-0`}>+91</span>
+            <div className="w-px h-5 bg-border-input" />
             <input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={`w-full h-12 ${t.inputField}`}
+              type="tel"
+              placeholder="Enter your phone number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              className={`flex-1 bg-transparent ${t.textPrimary} placeholder:text-text-muted text-sm outline-none`}
             />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={`w-full h-12 ${t.inputField}`}
-            />
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-            <button type="submit" disabled={loading} className={`w-full h-12 ${t.btnPrimary}`}>
-              {loading ? "Signing in…" : "Sign In"}
-            </button>
-            <div className="text-right">
-              <Link href="/forgot-password" className={`${t.textMuted} hover:${t.textSecondary} text-xs transition-colors`}>
-                Forgot password?
-              </Link>
-            </div>
-          </form>
-        )}
+          </div>
+          <button
+            type="submit"
+            disabled={!isReady}
+            className={`w-full h-12 ${t.btnPrimary}`}
+          >
+            Send OTP
+          </button>
+        </form>
 
         {/* Divider */}
         <div className="flex items-center gap-3 my-5">
@@ -131,17 +61,14 @@ export default function LoginPage() {
         </div>
 
         {/* Google */}
-        <button type="button" className={`w-full h-12 ${t.btnWhite} flex items-center justify-center gap-3`}>
+        <button
+          type="button"
+          className={`w-full h-12 ${t.btnWhite} flex items-center justify-center gap-3`}
+        >
           <GoogleIcon />
           Continue with Google
         </button>
       </div>
-
-      {/* Register link */}
-      <p className={`mt-6 ${t.textSecondary} text-sm`}>
-        Don&apos;t have an account?{" "}
-        <Link href="/register" className={`${t.link} font-medium`}>Register</Link>
-      </p>
     </main>
   );
 }
