@@ -78,6 +78,13 @@ export default function MyPage() {
 
 ---
 
+## Screenshots
+- Always save Playwright screenshots to `screenshots/<name>.png`
+- Never save screenshots to the project root or `.playwright-mcp/`
+- `screenshots/` is gitignored — safe to write freely
+
+---
+
 ## Tech stack notes
 - **Next.js 16** (App Router) + **TypeScript strict** + **Tailwind v4**
 - No shadcn/ui — incompatible with Tailwind v4
