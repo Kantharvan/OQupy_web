@@ -2,6 +2,31 @@
 
 # OQupy Web — Claude Code Rules
 
+## Cross-session communication via OQupy_shared_content
+
+All OQupy repos (`OQupy_web`, `OQupy_srv`) share a common contract repo at:
+
+```
+/Users/I532880/Library/MINE/OQupy_shared_content/
+```
+
+This repo is cloned locally alongside the others. **No need to `git pull` every time** — read files directly from disk. Only pull if you suspect the other session has pushed changes you haven't seen yet.
+
+### What lives there
+
+| File | Purpose |
+|------|---------|
+| `contracts/auth.md` | Auth endpoint shapes + implementation status (update when you implement an endpoint) |
+| `webapp-notes.md` | Web-specific integration notes (token handling, Google Sign-In, silent refresh) |
+| `roles/roles.md` | Role definitions and permissions matrix |
+
+### How to use it
+- **Before wiring any API call:** read the relevant contract file to get the exact request/response shape
+- **After implementing an endpoint on either side:** update the `Implementation Status` table in the contract file and push
+- **To communicate a requirement to the backend session:** add it to the contract file, push, then tell the user to notify the backend session
+
+---
+
 ## Design system — MANDATORY for every new page or component
 
 All pages and components MUST use the token system. Never hardcode hex color values.
