@@ -2,20 +2,26 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { t } from "@/styles/tokens";
+import { verifyOTP } from "@/lib/api/auth";
+import { useAuth } from "@/context/AuthContext";
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
 
 export default function VerifyOTPPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { setUser } = useAuth();
   const phone = searchParams.get("phone") ?? "";
   const masked = phone.length >= 4 ? `+91 ••••••${phone.slice(-4)}` : "+91";
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
   const [canResend, setCanResend] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => { inputRefs.current[0]?.focus(); }, []);
@@ -48,34 +54,51 @@ export default function VerifyOTPPage() {
     setOtp(Array(OTP_LENGTH).fill(""));
     setCountdown(RESEND_SECONDS);
     setCanResend(false);
+    setError(null);
     inputRefs.current[0]?.focus();
   }
 
-  function handleVerify(e: React.FormEvent) {
+  async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
     const code = otp.join("");
-    if (code.length < OTP_LENGTH) return;
-    // TODO: call verifyOTP(phone, code) → redirect
-    console.log("verify", phone, code);
+    if (code.length < OTP_LENGTH || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const { user, isNewUser } = await verifyOTP(phone, code);
+      setUser(user);
+
+      if (isNewUser || !user.role) {
+        router.push("/onboarding");
+      } else if (user.role === "student") {
+        router.push("/studios");
+      } else if (user.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid OTP. Please try again.");
+      setIsSubmitting(false);
+    }
   }
 
   const filled = otp.join("").length === OTP_LENGTH;
 
   return (
     <main className={`min-h-screen ${t.page} flex flex-col items-center justify-center px-4`}>
-      {/* Logo + subtitle */}
       <div className="mb-8 text-center">
         <h1 className={`text-5xl font-black tracking-widest ${t.brandText} uppercase`}>OQupy</h1>
         <p className={`mt-3 ${t.textPrimary} text-base font-medium`}>Enter the code sent to your phone</p>
         <p className={`mt-1 ${t.textSecondary} text-sm`}>{masked}</p>
       </div>
 
-      {/* Card */}
       <div className={`w-full max-w-sm ${t.cardBox} p-8`}>
         <h2 className={`text-xl font-semibold ${t.textPrimary} text-center mb-6`}>Verify OTP</h2>
 
         <form onSubmit={handleVerify} className="flex flex-col gap-5">
-          {/* 6-box OTP input */}
           <div className="flex gap-2 justify-between" onPaste={handlePaste}>
             {otp.map((digit, i) => (
               <input
@@ -92,14 +115,21 @@ export default function VerifyOTPPage() {
             ))}
           </div>
 
+          {error && (
+            <p className="text-red-400 text-sm text-center">{error}</p>
+          )}
+
           <p className={`${t.textMuted} text-sm text-center`}>Enter the 6-digit code we sent you.</p>
 
-          <button type="submit" disabled={!filled} className={`w-full h-13 ${t.btnPrimary}`}>
-            Verify OTP
+          <button
+            type="submit"
+            disabled={!filled || isSubmitting}
+            className={`w-full h-13 ${t.btnPrimary}`}
+          >
+            {isSubmitting ? "Verifying…" : "Verify OTP"}
           </button>
         </form>
 
-        {/* Resend */}
         <div className="mt-5 text-center">
           <p className={`${t.textSecondary} text-sm`}>Didn&apos;t receive the code?</p>
           <button
@@ -114,7 +144,6 @@ export default function VerifyOTPPage() {
         </div>
       </div>
 
-      {/* Back link */}
       <Link href="/login" className={`mt-6 flex items-center gap-1 ${t.link} text-sm font-medium`}>
         ← Back to Login
       </Link>
