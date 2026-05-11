@@ -13,7 +13,6 @@ const ROLES: { value: Role; label: string; description: string; icon: string }[]
   { value: "student", label: "Student", description: "Discover and book studio spaces near you", icon: "🎓" },
   { value: "instructor", label: "Instructor", description: "Teach classes and manage your schedule", icon: "🎤" },
   { value: "studio_owner", label: "Studio Owner", description: "List your studio and manage bookings", icon: "🏢" },
-  { value: "admin", label: "Admin", description: "Full platform access and management", icon: "⚙️" },
 ];
 
 export default function OnboardingPage() {
