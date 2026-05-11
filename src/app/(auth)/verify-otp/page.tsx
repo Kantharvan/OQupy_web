@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
+const IS_DEV = process.env.NODE_ENV === "development";
 
 export default function VerifyOTPPage() {
   const searchParams = useSearchParams();
@@ -22,6 +23,7 @@ export default function VerifyOTPPage() {
   const [canResend, setCanResend] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => { inputRefs.current[0]?.focus(); }, []);
@@ -31,6 +33,24 @@ export default function VerifyOTPPage() {
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
+
+  // Dev only: auto-fetch OTP from Redis via local API route
+  useEffect(() => {
+    if (!IS_DEV || !phone) return;
+    const fetchDevOtp = async () => {
+      try {
+        const res = await fetch(`/api/dev/otp?phone=${encodeURIComponent(phone)}`);
+        const data = await res.json();
+        if (data.otp) setDevOtp(data.otp);
+      } catch {
+        // silently ignore in dev
+      }
+    };
+    // Poll briefly after page loads to catch the OTP
+    fetchDevOtp();
+    const interval = setInterval(fetchDevOtp, 3000);
+    return () => clearInterval(interval);
+  }, [phone]);
 
   const handleChange = useCallback((index: number, value: string) => {
     const digit = value.replace(/\D/g, "").slice(-1);
@@ -55,6 +75,7 @@ export default function VerifyOTPPage() {
     setCountdown(RESEND_SECONDS);
     setCanResend(false);
     setError(null);
+    setDevOtp(null);
     inputRefs.current[0]?.focus();
   }
 
@@ -89,6 +110,29 @@ export default function VerifyOTPPage() {
 
   return (
     <main className={`min-h-screen ${t.page} flex flex-col items-center justify-center px-4`}>
+      {/* Dev OTP toast */}
+      {IS_DEV && devOtp && (
+        <div className="fixed top-4 right-4 z-50 bg-yellow-400 text-black text-sm font-mono font-bold px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide opacity-70">DEV</span>
+          <span>OTP: {devOtp}</span>
+          <button
+            onClick={() => {
+              const digits = devOtp.split("");
+              setOtp((prev) => {
+                const next = [...prev];
+                digits.forEach((d, i) => { next[i] = d; });
+                return next;
+              });
+              inputRefs.current[OTP_LENGTH - 1]?.focus();
+            }}
+            className="ml-1 underline text-xs opacity-80 hover:opacity-100"
+          >
+            autofill
+          </button>
+          <button onClick={() => setDevOtp(null)} className="ml-1 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
       <div className="mb-8 text-center">
         <h1 className={`text-5xl font-black tracking-widest ${t.brandText} uppercase`}>OQupy</h1>
         <p className={`mt-3 ${t.textPrimary} text-base font-medium`}>Enter the code sent to your phone</p>

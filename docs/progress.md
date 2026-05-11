@@ -27,6 +27,12 @@
 - Login page was navigating to `/verify-otp` without calling `POST /auth/send-otp`
 - Fixed: `handleSendOTP` now async, calls `sendOTP(phone)` first, shows error on failure, button shows "Sending…" state
 
+## Dev Helpers (remove before production)
+
+- `src/app/api/dev/otp/route.ts` — API route that reads OTP from Railway Redis via `redis-cli`; only active in `NODE_ENV=development`; returns `{ otp }` for a given phone number
+- `verify-otp` page polls `/api/dev/otp` every 3s and shows a yellow toast with the OTP + an "autofill" button
+- `REDIS_URL` in `.env.local` — **TODO: remove from `.env.local` before any production deploy; use Railway env vars only**
+
 ---
 
 ## Upcoming Phases
