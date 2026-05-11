@@ -4,20 +4,30 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoogleLogin } from "@react-oauth/google";
 import { t } from "@/styles/tokens";
-import { googleAuth } from "@/lib/api/auth";
+import { sendOTP, googleAuth } from "@/lib/api/auth";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
   const router = useRouter();
   const { setUser } = useAuth();
   const isReady = phone.length === 10;
 
-  function handleSendOTP(e: React.FormEvent) {
+  async function handleSendOTP(e: React.FormEvent) {
     e.preventDefault();
-    if (!isReady) return;
-    router.push(`/verify-otp?phone=${encodeURIComponent(phone)}`);
+    if (!isReady || isSending) return;
+    setIsSending(true);
+    setOtpError(null);
+    try {
+      await sendOTP(phone);
+      router.push(`/verify-otp?phone=${encodeURIComponent(phone)}`);
+    } catch (err) {
+      setOtpError(err instanceof Error ? err.message : "Failed to send OTP. Please try again.");
+      setIsSending(false);
+    }
   }
 
   async function handleGoogleSuccess(credentialResponse: { credential?: string }) {
@@ -72,12 +82,15 @@ export default function LoginPage() {
               className={`flex-1 bg-transparent ${t.textPrimary} placeholder:text-text-muted text-sm outline-none`}
             />
           </div>
+          {otpError && (
+            <p className="text-red-400 text-sm text-center">{otpError}</p>
+          )}
           <button
             type="submit"
-            disabled={!isReady}
+            disabled={!isReady || isSending}
             className={`w-full h-12 ${t.btnPrimary}`}
           >
-            Send OTP
+            {isSending ? "Sending…" : "Send OTP"}
           </button>
         </form>
 

@@ -4,68 +4,39 @@
 - Next.js 16, TypeScript strict, Tailwind CSS v4, ESLint, App Router, src/ directory
 - `docs/` folder with context, decisions, progress, flow
 
----
-
 ## Phase 0.5 — Design System ✅
 - Design tokens set in `src/app/globals.css` using Tailwind v4 `@theme`
-- Color palette locked: `#0a0a0a` page bg · `#141414` card · `#1a1a1a` input · `#c2410c` CTA btn · `#f97316` brand/logo · `white` Google btn
-- `layout.tsx` updated: OQupy metadata, dark bg enforced
-- Root `/` redirects to `/login`
-- No shadcn/ui — raw Tailwind v4 (shadcn targets Tailwind v3; incompatible)
-
-### Token system ✅
+- Color palette locked: `#0a0a0a` page bg · `#141414` card · `#1a1a1a` input · `#c2410c` CTA btn · `#f97316` brand/logo
 - `src/styles/tokens.ts` — single source of truth for all Tailwind class shortcuts
-- `CLAUDE.md` updated with mandatory token usage rules and page template
-- All existing pages refactored to use `import { t } from "@/styles/tokens"` — no hardcoded hex in components
-- **To change the theme:** edit hex values in `globals.css` only
-- **To build a new page:** import `t` from `@/styles/tokens` and use `t.page`, `t.cardBox`, `t.btnPrimary`, etc.
+- All pages use `import { t } from "@/styles/tokens"` — no hardcoded hex in components
+- Root `/` redirects to `/login`
+- No shadcn/ui — incompatible with Tailwind v4
 
----
+## Phase 1 — Auth Flow ✅
+- `src/app/(auth)/login/page.tsx` — phone +91 input + Google Sign-In; calls `POST /auth/send-otp` before navigating to `/verify-otp`; shows loading state + error on failure
+- `src/app/(auth)/verify-otp/page.tsx` — 6-box OTP input, paste, auto-advance, backspace nav, 30s resend countdown, post-verify routing by role
+- `src/app/(onboarding)/page.tsx` — role picker (student / instructor / studio_owner / admin), calls `PATCH /users/:id`; routes to correct destination after role set
+- `src/lib/api/auth.ts` — `sendOTP`, `verifyOTP`, `googleAuth`, `getMe`, `logout`
+- `src/lib/api/users.ts` — `updateUserRole`
+- `src/lib/api/client.ts` — `apiRequest` with auth headers, silent 401 refresh, redirect on session expiry
+- `src/context/AuthContext.tsx` — in-memory token store, user state, boots via `GET /auth/me`
+- `src/context/GoogleProvider.tsx` — wraps app for Google Sign-In SDK
+- Removed deprecated `src/middleware.ts` (Next.js 16 renamed to `proxy`; was a no-op anyway)
 
-## Phase 1 — Auth Flows (In Progress)
-
-### Completed
-- [x] `src/app/(auth)/layout.tsx` — Suspense wrapper
-- [x] `src/app/(auth)/login/page.tsx` — simplified single-flow UI:
-  - **Phone / OTP** (only flow) — +91 prefix, 10-digit input, Send OTP button disabled until exactly 10 digits entered → navigates to `/verify-otp`
-  - OR divider + Continue with Google button (stub, wired when backend ready)
-  - No email/password tab — removed (Google covers password-based users)
-  - No "Register" link — removed (post-login onboarding pattern adopted, see below)
-- [x] `src/app/(auth)/verify-otp/page.tsx` — 6-box OTP input (auto-focus, auto-advance, paste, backspace nav), 30s resend countdown, Verify button disabled until all 6 digits filled, Back to Login
-- [x] Both pages use token system (`t.*` classes, no hardcoded hex)
-
-### Post-login onboarding (replaces /register)
-- New users are detected after OTP verify or Google login via backend response (`isNewUser: true` or `user.role === null`)
-- Frontend redirects new users to `/onboarding` instead of a separate register page
-- `/onboarding` will collect: name, role selection, and any role-specific details
-- This keeps the login page minimal and registration frictionless (no pre-auth signup form)
-- **Backend requirement:** `POST /auth/verify-otp` and `POST /auth/google` responses must include `isNewUser: boolean` (or equivalent) so the frontend can branch correctly
-
-### Backend contract (from OQupy_srv audit)
-- Auth: custom JWT (email + password) — `JWT_EXPIRES_IN=7d`, single token, Redis blacklist on logout
-- Phone OTP endpoints (`POST /auth/send-otp`, `POST /auth/verify-otp`) to be added to srv
-- Both flows return `{ token, user }` — same shape
-- Four roles: `studio_owner` | `instructor` | `student` | `admin`
-
-### Pending
-- [ ] `src/lib/api/client.ts` — base fetch wrapper (Authorization header, 401 handling)
-- [ ] `src/lib/api/auth.ts` — `sendOTP()`, `verifyOTP()`, `login()`, `logout()`, `me()`
-- [ ] `src/context/AuthContext.tsx` — token in memory, expose `user`, `login`, `logout`
-- [ ] `src/middleware.ts` — protect routes, redirect unauthenticated to `/login`
-- [ ] Role-based redirect after login: student → `/studios`, owner → `/dashboard`, admin → `/admin`, instructor → `/dashboard`
-- [ ] `src/app/(onboarding)/page.tsx` — post-login: name, role selector (4 roles), role-specific details; shown to new users only
-- [ ] Role-based redirect after onboarding: student → `/studios`, owner → `/dashboard`, admin → `/admin`, instructor → `/dashboard`
+## Fix — OTP Not Sent Before Navigation ✅
+- Login page was navigating to `/verify-otp` without calling `POST /auth/send-otp`
+- Fixed: `handleSendOTP` now async, calls `sendOTP(phone)` first, shows error on failure, button shows "Sending…" state
 
 ---
 
 ## Upcoming Phases
 
-| Phase | Module                 | Status         |
-|-------|------------------------|----------------|
-| 0     | Scaffold               | ✅ Done        |
-| 0.5   | Design system + tokens | ✅ Done        |
-| 1     | Auth flows             | 🔄 In Progress |
-| 2     | Studio discovery       | Pending        |
-| 3     | Bookings / Enroll      | Pending        |
-| 4     | Studio owner dashboard | Pending        |
-| 5     | Admin panel            | Pending        |
+| Phase | Feature | Status |
+|-------|---------|--------|
+| 0 | Scaffold + design system | ✅ Done |
+| 1 | Auth flow (login / OTP / Google / onboarding) | ✅ Done |
+| 2 | Studios list (`/studios`) — student landing | Pending |
+| 3 | Dashboard (`/dashboard`) — instructor + studio owner | Pending |
+| 4 | Admin panel (`/admin`) | Pending |
+| 5 | Studio detail + booking flow | Pending |
+| 6 | User profile + settings | Pending |
