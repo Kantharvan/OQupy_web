@@ -10,9 +10,8 @@ import { type User } from "@/lib/api/auth";
 type Role = NonNullable<User["role"]>;
 
 const ROLES: { value: Role; label: string; description: string; icon: string }[] = [
-  { value: "student", label: "Student", description: "Discover and book studio spaces near you", icon: "🎓" },
-  { value: "instructor", label: "Instructor", description: "Teach classes and manage your schedule", icon: "🎤" },
   { value: "studio_owner", label: "Studio Owner", description: "List your studio and manage bookings", icon: "🏢" },
+  { value: "instructor", label: "Instructor", description: "Teach classes and manage your schedule", icon: "🎤" },
 ];
 
 export default function OnboardingPage() {
@@ -38,9 +37,7 @@ export default function OnboardingPage() {
     try {
       const updated = await updateUserProfile(user.id, { name: name.trim(), role: selected });
       setUser(updated);
-      if (selected === "student") router.push("/studios");
-      else if (selected === "admin") router.push("/admin");
-      else router.push("/dashboard");
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setIsSubmitting(false);

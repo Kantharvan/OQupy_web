@@ -8,7 +8,7 @@ type UpdateProfileDto = {
 
 export async function updateUserProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
   return apiRequest<User>(`/users/${userId}`, {
-    method: "PATCH",
+    method: "PUT",
     body: dto,
   });
 }

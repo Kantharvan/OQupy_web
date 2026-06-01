@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { getMe, logout as apiLogout, type User } from "@/lib/api/auth";
-import { getAccessToken } from "@/lib/api/client";
+import { getAccessToken, loadPersistedRefreshToken } from "@/lib/api/client";
 
 type AuthContextType = {
   user: User | null;
@@ -18,7 +18,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!getAccessToken()) {
+    loadPersistedRefreshToken();
+    if (!getAccessToken() && !localStorage.getItem("oqupy_refresh")) {
       setIsLoading(false);
       return;
     }

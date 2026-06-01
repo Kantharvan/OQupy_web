@@ -1,4 +1,5 @@
-const BASE_URL = "https://oqupysrv-production.up.railway.app/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://oqupysrv-production.up.railway.app/api/v1";
+const REFRESH_KEY = "oqupy_refresh";
 
 type TokenStore = {
   accessToken: string | null;
@@ -10,11 +11,13 @@ const tokens: TokenStore = { accessToken: null, refreshToken: null };
 export function setTokens(access: string, refresh: string) {
   tokens.accessToken = access;
   tokens.refreshToken = refresh;
+  if (typeof window !== "undefined") localStorage.setItem(REFRESH_KEY, refresh);
 }
 
 export function clearTokens() {
   tokens.accessToken = null;
   tokens.refreshToken = null;
+  if (typeof window !== "undefined") localStorage.removeItem(REFRESH_KEY);
 }
 
 export function getAccessToken() {
@@ -23,6 +26,12 @@ export function getAccessToken() {
 
 export function getRefreshToken() {
   return tokens.refreshToken;
+}
+
+export function loadPersistedRefreshToken() {
+  if (typeof window === "undefined") return;
+  const stored = localStorage.getItem(REFRESH_KEY);
+  if (stored) tokens.refreshToken = stored;
 }
 
 async function refreshTokens(): Promise<boolean> {

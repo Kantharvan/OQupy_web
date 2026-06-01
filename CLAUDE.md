@@ -113,6 +113,7 @@ export default function MyPage() {
 ## Tech stack notes
 - **Next.js 16** (App Router) + **TypeScript strict** + **Tailwind v4**
 - No shadcn/ui — incompatible with Tailwind v4
-- API base: `https://oqupysrv-production.up.railway.app/api/v1`
+- API base (prod): `https://oqupy-prod.up.railway.app/api/v1`
+- API base (dev): `https://oqupy-dev.up.railway.app/api/v1`
 - Auth: JWT (7d), stored in memory; Redis blacklist on logout
 - Four roles: `studio_owner` | `instructor` | `student` | `admin`
