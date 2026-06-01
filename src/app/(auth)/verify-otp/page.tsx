@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { t } from "@/styles/tokens";
@@ -11,7 +11,7 @@ const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
 const IS_DEV = process.env.NODE_ENV === "development";
 
-export default function VerifyOTPPage() {
+function VerifyOTPContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { setUser } = useAuth();
@@ -192,5 +192,13 @@ export default function VerifyOTPPage() {
         ← Back to Login
       </Link>
     </main>
+  );
+}
+
+export default function VerifyOTPPage() {
+  return (
+    <Suspense>
+      <VerifyOTPContent />
+    </Suspense>
   );
 }

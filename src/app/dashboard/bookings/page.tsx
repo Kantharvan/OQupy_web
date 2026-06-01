@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getOwnerStudios, type Studio } from "@/lib/api/studios";
@@ -19,7 +19,7 @@ const STATUS_COLORS: Record<BookingStatus, string> = {
   Cancelled: "bg-red-500/15 text-red-400",
 };
 
-export default function DashboardBookingsPage() {
+function DashboardBookingsContent() {
   const searchParams = useSearchParams();
   const preselectedStudioId = searchParams.get("studioId");
   const { user } = useAuth();
@@ -155,5 +155,13 @@ export default function DashboardBookingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DashboardBookingsPage() {
+  return (
+    <Suspense>
+      <DashboardBookingsContent />
+    </Suspense>
   );
 }

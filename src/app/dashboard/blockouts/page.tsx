@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getOwnerStudios, type Studio } from "@/lib/api/studios";
 import { getBlockoutsByStudio, createBlockout, deleteBlockout, type Blockout, type CreateBlockoutDto } from "@/lib/api/blockouts";
 import { t } from "@/styles/tokens";
 
-export default function DashboardBlockoutsPage() {
+function DashboardBlockoutsContent() {
   const searchParams = useSearchParams();
   const preselectedStudioId = searchParams.get("studioId");
   const { user } = useAuth();
@@ -225,5 +225,13 @@ export default function DashboardBlockoutsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DashboardBlockoutsPage() {
+  return (
+    <Suspense>
+      <DashboardBlockoutsContent />
+    </Suspense>
   );
 }
