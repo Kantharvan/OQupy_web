@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useTransition } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getOwnerStudios, type Studio } from "@/lib/api/studios";
 import { getBlockoutsByStudio, createBlockout, deleteBlockout, type Blockout, type CreateBlockoutDto } from "@/lib/api/blockouts";
@@ -120,7 +120,8 @@ function BlockoutsPanel({ studioId }: { studioId: string }) {
     }
   }, [studioId]);
 
-  useEffect(() => { load(); }, [load]);
+  const [, startTransition] = useTransition();
+  useEffect(() => { startTransition(() => { load(); }); }, [load]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();

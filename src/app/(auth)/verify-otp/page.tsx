@@ -20,7 +20,7 @@ function VerifyOTPContent() {
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
-  const [canResend, setCanResend] = useState(false);
+  const canResend = countdown === 0;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [devOtp, setDevOtp] = useState<string | null>(null);
@@ -29,7 +29,7 @@ function VerifyOTPContent() {
   useEffect(() => { inputRefs.current[0]?.focus(); }, []);
 
   useEffect(() => {
-    if (countdown === 0) { setCanResend(true); return; }
+    if (countdown === 0) return;
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
@@ -73,7 +73,6 @@ function VerifyOTPContent() {
     if (!canResend) return;
     setOtp(Array(OTP_LENGTH).fill(""));
     setCountdown(RESEND_SECONDS);
-    setCanResend(false);
     setError(null);
     setDevOtp(null);
     inputRefs.current[0]?.focus();
