@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://oqupysrv-production.up.railway.app/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://oqupy-prod.up.railway.app/api/v1";
 const REFRESH_KEY = "oqupy_refresh";
 
 type TokenStore = {
