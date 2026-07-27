@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useTransition } from "react";
 import { t } from "@/styles/tokens";
 import { getStudios, type Studio, type StudiosQuery } from "@/lib/api/studios";
 
@@ -83,12 +83,14 @@ export default function StudiosPage() {
     }
   }, [page, debouncedSearch, debouncedLocation, date, startTime, endTime]);
 
+  const [, startTransition] = useTransition();
+
   useEffect(() => {
-    setPage(1);
+    startTransition(() => setPage(1));
   }, [debouncedSearch, debouncedLocation, date, startTime, endTime]);
 
   useEffect(() => {
-    fetchStudios();
+    startTransition(() => { fetchStudios(); });
   }, [fetchStudios]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);

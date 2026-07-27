@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useTransition, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getOwnerStudios, type Studio } from "@/lib/api/studios";
@@ -51,7 +51,8 @@ function DashboardBlockoutsContent() {
     }
   }, [selectedStudioId]);
 
-  useEffect(() => { loadBlockouts(); }, [loadBlockouts]);
+  const [, startTransition] = useTransition();
+  useEffect(() => { startTransition(() => { loadBlockouts(); }); }, [loadBlockouts]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
