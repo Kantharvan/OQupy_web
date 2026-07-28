@@ -2,23 +2,28 @@
 
 import { useEffect, useState, useCallback, useTransition } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getOwnerStudios, type Studio } from "@/lib/api/studios";
+import { getOwnerStudios, createStudio, type Studio, type StudioType, type CreateStudioDto } from "@/lib/api/studios";
 import { getBlockoutsByStudio, createBlockout, deleteBlockout, type Blockout, type CreateBlockoutDto } from "@/lib/api/blockouts";
 import { t } from "@/styles/tokens";
+
+const STUDIO_TYPES: StudioType[] = ["Dance", "Fitness", "Music", "Art", "Yoga"];
 
 export default function DashboardStudiosPage() {
   const { user } = useAuth();
   const [studios, setStudios] = useState<Studio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!user) return;
     getOwnerStudios(user.id)
       .then((res) => setStudios(res.data))
       .catch((err) => setError(err.message))
       .finally(() => setIsLoading(false));
   }, [user]);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div>
@@ -27,10 +32,23 @@ export default function DashboardStudiosPage() {
           <h2 className={`text-xl font-bold ${t.textPrimary}`}>My Studios</h2>
           <p className={`text-sm ${t.textMuted} mt-0.5`}>Manage your listed studios.</p>
         </div>
-        <button type="button" className={`h-10 px-5 ${t.btnPrimary} text-sm`} disabled>
-          + Add Studio
+        <button
+          type="button"
+          onClick={() => setShowAddForm((v) => !v)}
+          className={`h-10 px-5 ${t.btnPrimary} text-sm`}
+        >
+          {showAddForm ? "Cancel" : "+ Add Studio"}
         </button>
       </div>
+
+      {showAddForm && (
+        <AddStudioForm
+          onCreated={() => {
+            setShowAddForm(false);
+            load();
+          }}
+        />
+      )}
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
@@ -54,6 +72,100 @@ export default function DashboardStudiosPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function AddStudioForm({ onCreated }: { onCreated: () => void }) {
+  const [name, setName] = useState("");
+  const [location, setLocation] = useState("");
+  const [price, setPrice] = useState("");
+  const [types, setTypes] = useState<StudioType[]>([]);
+  const [description, setDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  function toggleType(type: StudioType) {
+    setTypes((prev) => (prev.includes(type) ? prev.filter((x) => x !== type) : [...prev, type]));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name || !location || !price || types.length === 0) return;
+    setIsSubmitting(true);
+    setFormError(null);
+    try {
+      const dto: CreateStudioDto = {
+        name,
+        location,
+        price,
+        type: types,
+        description: description || undefined,
+      };
+      await createStudio(dto);
+      onCreated();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Failed to create studio");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className={`${t.cardBox} flex flex-col gap-3 p-4 mb-6`}>
+      <input
+        type="text"
+        placeholder="Studio name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+        className={`h-10 ${t.inputField} px-3 text-sm`}
+      />
+      <div className="flex gap-3 flex-wrap">
+        <input
+          type="text"
+          placeholder="Location"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          required
+          className={`flex-1 h-10 ${t.inputField} px-3 text-sm`}
+        />
+        <input
+          type="text"
+          placeholder="Price per hour (₹)"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          required
+          className={`flex-1 h-10 ${t.inputField} px-3 text-sm`}
+        />
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        {STUDIO_TYPES.map((type) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => toggleType(type)}
+            className={`h-8 px-3 rounded-lg border text-xs font-medium transition-colors ${
+              types.includes(type)
+                ? "border-brand bg-brand-btn text-white"
+                : `${t.borderInput} ${t.textSecondary} hover:border-zinc-500`
+            }`}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
+      <textarea
+        placeholder="Description (optional)"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        rows={2}
+        className={`${t.inputField} px-3 py-2 text-sm resize-none`}
+      />
+      {formError && <p className="text-red-400 text-xs">{formError}</p>}
+      <button type="submit" disabled={isSubmitting} className={`h-10 ${t.btnPrimary} text-sm`}>
+        {isSubmitting ? "Creating…" : "Create Studio"}
+      </button>
+    </form>
   );
 }
 

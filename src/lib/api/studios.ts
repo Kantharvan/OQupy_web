@@ -35,8 +35,23 @@ export type StudiosQuery = {
   limit?: number;
 };
 
+export type CreateStudioDto = {
+  name: string;
+  location: string;
+  price: string;
+  type: StudioType[];
+  description?: string;
+  images?: string[];
+  amenities?: string[];
+  cancellationPolicy?: number;
+};
+
 export async function getOwnerStudios(ownerId: string, page = 1, limit = 50): Promise<StudiosResponse> {
   return apiRequest<StudiosResponse>(`/studios/owner/${ownerId}?page=${page}&limit=${limit}`);
+}
+
+export async function createStudio(dto: CreateStudioDto): Promise<Studio> {
+  return apiRequest<Studio>("/studios", { method: "POST", body: dto });
 }
 
 export async function getStudios(query: StudiosQuery = {}): Promise<StudiosResponse> {
