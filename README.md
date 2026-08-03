@@ -1,5 +1,15 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Full-stack local dev (recommended)
+
+To run this alongside the backend, Postgres, and Redis with test accounts pre-seeded for every role, use the orchestration script in the backend repo instead of running this alone:
+
+```bash
+cd ../OQupy_srv/oqupy-srv && npm run dev:local
+```
+
+See that repo's README for details. Requires `.env.development` here (`NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1`) — see `.env.example` if present.
+
 ## Getting Started
 
 First, run the development server:
