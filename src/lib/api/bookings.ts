@@ -1,6 +1,6 @@
 import { apiRequest } from "./client";
 
-export type BookingStatus = "AwaitingApproval" | "Approved" | "Cancelled";
+export type BookingStatus = "AwaitingApproval" | "Confirmed" | "Cancelled" | "Completed";
 export type BookingType = "instructor_event" | "student_practice" | "owner_event";
 
 export type Booking = {
@@ -30,8 +30,23 @@ export type BookingsResponse = {
   total: number;
 };
 
+export type CreateBookingDto = {
+  studioId: string;
+  bookingType: BookingType;
+  eventName: string;
+  eventDescription?: string;
+  dateTime: string;
+  durationHours: number;
+  clientName?: string;
+  clientPhone?: string;
+};
+
 export async function getBookingsByStudio(studioId: string, page = 1, limit = 20): Promise<BookingsResponse> {
   return apiRequest<BookingsResponse>(`/bookings/studio/${studioId}?page=${page}&limit=${limit}`);
+}
+
+export async function createBooking(dto: CreateBookingDto): Promise<Booking> {
+  return apiRequest<Booking>("/bookings", { method: "POST", body: dto });
 }
 
 export async function confirmBooking(id: string): Promise<Booking> {

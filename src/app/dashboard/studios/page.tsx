@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useTransition } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getOwnerStudios, createStudio, type Studio, type StudioType, type CreateStudioDto } from "@/lib/api/studios";
+import { getOwnerStudios, createStudio, updateStudio, type Studio, type StudioType, type CreateStudioDto } from "@/lib/api/studios";
 import { getBlockoutsByStudio, createBlockout, deleteBlockout, type Blockout, type CreateBlockoutDto } from "@/lib/api/blockouts";
 import { t } from "@/styles/tokens";
 
@@ -13,7 +13,7 @@ export default function DashboardStudiosPage() {
   const [studios, setStudios] = useState<Studio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   const load = useCallback(() => {
     if (!user) return;
@@ -25,26 +25,31 @@ export default function DashboardStudiosPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // One studio per owner for now.
+  const studio = studios[0];
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className={`text-xl font-bold ${t.textPrimary}`}>My Studios</h2>
-          <p className={`text-sm ${t.textMuted} mt-0.5`}>Manage your listed studios.</p>
+          <h2 className={`text-xl font-bold ${t.textPrimary}`}>My Studio</h2>
+          <p className={`text-sm ${t.textMuted} mt-0.5`}>Manage your listed studio.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowAddForm((v) => !v)}
-          className={`h-10 px-5 ${t.btnPrimary} text-sm`}
-        >
-          {showAddForm ? "Cancel" : "+ Add Studio"}
-        </button>
+        {!isLoading && !studio && (
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            className={`h-10 px-5 ${t.btnPrimary} text-sm`}
+          >
+            {showForm ? "Cancel" : "+ Add Studio"}
+          </button>
+        )}
       </div>
 
-      {showAddForm && (
-        <AddStudioForm
-          onCreated={() => {
-            setShowAddForm(false);
+      {showForm && !studio && (
+        <StudioForm
+          onSaved={() => {
+            setShowForm(false);
             load();
           }}
         />
@@ -53,34 +58,35 @@ export default function DashboardStudiosPage() {
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
       {isLoading ? (
-        <div className="flex flex-col gap-4">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className={`${t.cardBox} h-32 animate-pulse`} />
-          ))}
-        </div>
-      ) : studios.length === 0 ? (
+        <div className={`${t.cardBox} h-32 animate-pulse`} />
+      ) : !studio ? (
         <div className={`${t.cardBox} p-10 text-center`}>
           <div className="w-16 h-16 rounded-xl bg-bg-input mx-auto mb-3" />
-          <p className={`${t.textPrimary} font-semibold mb-1`}>No studios yet</p>
-          <p className={`text-sm ${t.textMuted}`}>Add your first studio to start accepting bookings.</p>
+          <p className={`${t.textPrimary} font-semibold mb-1`}>No studio yet</p>
+          <p className={`text-sm ${t.textMuted}`}>Add your studio to start accepting bookings.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
-          {studios.map((studio) => (
-            <StudioPanel key={studio.id} studio={studio} />
-          ))}
-        </div>
+        <StudioPanel studio={studio} onUpdated={load} />
       )}
     </div>
   );
 }
 
-function AddStudioForm({ onCreated }: { onCreated: () => void }) {
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
-  const [price, setPrice] = useState("");
-  const [types, setTypes] = useState<StudioType[]>([]);
-  const [description, setDescription] = useState("");
+function StudioForm({
+  studio,
+  onSaved,
+  onCancel,
+}: {
+  studio?: Studio;
+  onSaved: () => void;
+  onCancel?: () => void;
+}) {
+  const isEditing = !!studio;
+  const [name, setName] = useState(studio?.name ?? "");
+  const [location, setLocation] = useState(studio?.location ?? "");
+  const [price, setPrice] = useState(studio?.price ?? "");
+  const [types, setTypes] = useState<StudioType[]>(studio?.type ?? []);
+  const [description, setDescription] = useState(studio?.description ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -101,10 +107,14 @@ function AddStudioForm({ onCreated }: { onCreated: () => void }) {
         type: types,
         description: description || undefined,
       };
-      await createStudio(dto);
-      onCreated();
+      if (isEditing) {
+        await updateStudio(studio.name, dto);
+      } else {
+        await createStudio(dto);
+      }
+      onSaved();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Failed to create studio");
+      setFormError(err instanceof Error ? err.message : `Failed to ${isEditing ? "save" : "create"} studio`);
     } finally {
       setIsSubmitting(false);
     }
@@ -162,16 +172,41 @@ function AddStudioForm({ onCreated }: { onCreated: () => void }) {
         className={`${t.inputField} px-3 py-2 text-sm resize-none`}
       />
       {formError && <p className="text-red-400 text-xs">{formError}</p>}
-      <button type="submit" disabled={isSubmitting} className={`h-10 ${t.btnPrimary} text-sm`}>
-        {isSubmitting ? "Creating…" : "Create Studio"}
-      </button>
+      <div className="flex gap-2">
+        <button type="submit" disabled={isSubmitting} className={`h-10 ${t.btnPrimary} text-sm flex-1`}>
+          {isSubmitting ? (isEditing ? "Saving…" : "Creating…") : isEditing ? "Save Changes" : "Create Studio"}
+        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className={`h-10 px-4 rounded-xl border text-sm ${t.borderInput} ${t.textSecondary} hover:border-zinc-500 transition-colors`}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }
 
-function StudioPanel({ studio }: { studio: Studio }) {
+function StudioPanel({ studio, onUpdated }: { studio: Studio; onUpdated: () => void }) {
   const cover = studio.images[0];
   const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <StudioForm
+        studio={studio}
+        onSaved={() => {
+          setEditing(false);
+          onUpdated();
+        }}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
 
   return (
     <div className={`${t.cardBox} overflow-hidden`}>
@@ -189,13 +224,22 @@ function StudioPanel({ studio }: { studio: Studio }) {
           <p className={`text-xs ${t.textMuted} mt-0.5`}>📍 {studio.location}</p>
           <p className={`text-xs ${t.textMuted}`}>{studio.type.join(", ")} · ₹{studio.price}/hr</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className={`shrink-0 h-8 px-3 rounded-lg border text-xs font-medium ${t.borderInput} ${t.textSecondary} hover:border-zinc-500 transition-colors`}
-        >
-          {expanded ? "Hide blockouts ↑" : "Blockouts ↓"}
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className={`h-8 px-3 rounded-lg border text-xs font-medium ${t.borderInput} ${t.textSecondary} hover:border-zinc-500 transition-colors`}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className={`h-8 px-3 rounded-lg border text-xs font-medium ${t.borderInput} ${t.textSecondary} hover:border-zinc-500 transition-colors`}
+          >
+            {expanded ? "Hide blockouts ↑" : "Blockouts ↓"}
+          </button>
+        </div>
       </div>
 
       {/* Blockouts section */}

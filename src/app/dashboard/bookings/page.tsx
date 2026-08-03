@@ -9,14 +9,16 @@ import { t } from "@/styles/tokens";
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   AwaitingApproval: "Pending",
-  Approved: "Approved",
+  Confirmed: "Approved",
   Cancelled: "Cancelled",
+  Completed: "Completed",
 };
 
 const STATUS_COLORS: Record<BookingStatus, string> = {
   AwaitingApproval: "bg-yellow-500/15 text-yellow-400",
-  Approved: "bg-green-500/15 text-green-400",
+  Confirmed: "bg-green-500/15 text-green-400",
   Cancelled: "bg-red-500/15 text-red-400",
+  Completed: "bg-blue-500/15 text-blue-400",
 };
 
 function DashboardBookingsContent() {
