@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
+import Link from "next/link";
 import { t } from "@/styles/tokens";
 import { getStudios, type Studio, type StudiosQuery } from "@/lib/api/studios";
 
@@ -9,7 +10,10 @@ const PAGE_SIZE = 12;
 function StudioCard({ studio }: { studio: Studio }) {
   const cover = studio.images[0];
   return (
-    <div className={`${t.cardBox} overflow-hidden flex flex-col hover:border-zinc-600 transition-colors cursor-pointer`}>
+    <Link
+      href={`/studios/${encodeURIComponent(studio.name)}`}
+      className={`${t.cardBox} overflow-hidden flex flex-col hover:border-zinc-600 transition-colors cursor-pointer`}
+    >
       <div className="relative w-full h-44 bg-bg-input flex items-center justify-center overflow-hidden">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -33,7 +37,7 @@ function StudioCard({ studio }: { studio: Studio }) {
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

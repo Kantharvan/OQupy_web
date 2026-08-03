@@ -59,7 +59,7 @@ export default function DashboardOverviewPage() {
   const revenue = useMemo(() => {
     const from = startOf(revenueRange);
     return allBookings
-      .filter((b) => b.status === "Approved" && b.paymentAmount && (from ? new Date(b.dateTime) >= from : true))
+      .filter((b) => b.status === "Confirmed" && b.paymentAmount && (from ? new Date(b.dateTime) >= from : true))
       .reduce((sum, b) => sum + (b.paymentAmount ?? 0), 0);
   }, [allBookings, revenueRange]);
 
@@ -221,13 +221,15 @@ function StudioCard({ studio }: { studio: Studio }) {
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     AwaitingApproval: "bg-yellow-500/15 text-yellow-400",
-    Approved: "bg-green-500/15 text-green-400",
+    Confirmed: "bg-green-500/15 text-green-400",
     Cancelled: "bg-red-500/15 text-red-400",
+    Completed: "bg-blue-500/15 text-blue-400",
   };
   const label: Record<string, string> = {
     AwaitingApproval: "Pending",
-    Approved: "Approved",
+    Confirmed: "Approved",
     Cancelled: "Cancelled",
+    Completed: "Completed",
   };
   return (
     <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${map[status] ?? "bg-bg-input text-text-muted"}`}>

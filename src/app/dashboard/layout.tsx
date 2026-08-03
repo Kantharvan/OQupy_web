@@ -11,6 +11,8 @@ const NAV = [
   { href: "/dashboard/bookings", label: "Bookings", exact: false },
 ];
 
+const ADMIN_NAV = { href: "/dashboard/admin", label: "Admin", exact: false };
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -28,7 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <span className={`text-lg font-black tracking-widest ${t.brandText} uppercase mr-2`}>OQupy</span>
 
         <nav className="flex items-center gap-1 flex-1">
-          {NAV.map((item) => {
+          {[...NAV, ...(user?.role === "admin" ? [ADMIN_NAV] : [])].map((item) => {
             const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
             return (
               <Link

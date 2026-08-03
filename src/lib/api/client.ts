@@ -44,7 +44,8 @@ async function refreshTokens(): Promise<boolean> {
     });
     if (!res.ok) return false;
     const data = await res.json();
-    setTokens(data.accessToken, data.refreshToken);
+    // /auth/refresh only rotates the access token — the refresh token is long-lived and reused.
+    setTokens(data.accessToken, tokens.refreshToken);
     return true;
   } catch {
     return false;

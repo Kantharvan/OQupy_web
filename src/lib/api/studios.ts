@@ -50,8 +50,16 @@ export async function getOwnerStudios(ownerId: string, page = 1, limit = 50): Pr
   return apiRequest<StudiosResponse>(`/studios/owner/${ownerId}?page=${page}&limit=${limit}`);
 }
 
+export async function getStudioByName(name: string): Promise<Studio> {
+  return apiRequest<Studio>(`/studios/by-name/${encodeURIComponent(name)}`);
+}
+
 export async function createStudio(dto: CreateStudioDto): Promise<Studio> {
   return apiRequest<Studio>("/studios", { method: "POST", body: dto });
+}
+
+export async function updateStudio(name: string, dto: Partial<CreateStudioDto>): Promise<Studio> {
+  return apiRequest<Studio>(`/studios/by-name/${encodeURIComponent(name)}`, { method: "PUT", body: dto });
 }
 
 export async function getStudios(query: StudiosQuery = {}): Promise<StudiosResponse> {
