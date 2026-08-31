@@ -41,8 +41,22 @@
 |-------|---------|--------|
 | 0 | Scaffold + design system | ✅ Done |
 | 1 | Auth flow (login / OTP / Google / onboarding) | ✅ Done |
-| 2 | Studios list (`/studios`) — student landing | Pending |
-| 3 | Dashboard (`/dashboard`) — instructor + studio owner | Pending |
-| 4 | Admin panel (`/admin`) | Pending |
-| 5 | Studio detail + booking flow | Pending |
+| 2 | Studios list (`/studios`) — student landing | ✅ Done |
+| 3 | Dashboard (`/dashboard`) — owner + instructor + admin | ✅ Done |
+| 4 | Admin panel (`/dashboard/admin`) — role assignment | ✅ Done (partial — expand as needed) |
+| 5 | Studio detail (`/studios/[name]`) + booking requests | ✅ Done |
+| 5b | Full booking flow (calendar picker, payment) | Pending |
 | 6 | User profile + settings | Pending |
+| 7 | Blockouts management UI (`/dashboard/blockouts`) | ✅ Done |
+
+## Last synced with reality: 2026-08-31
+
+Ships since Aug 3 (PRs #3–#5 merged):
+- Owner Add Studio form + studio edit
+- Public studios browse page
+- Studio detail page (`/studios/[name]`)
+- Booking requests with admin approval flow
+- Admin dashboard for role assignment (self-service onboarding removed)
+- Blockouts page in dashboard
+- API clients: `admin.ts`, `blockouts.ts`, `bookings.ts`, `studios.ts`, `users.ts`
+
