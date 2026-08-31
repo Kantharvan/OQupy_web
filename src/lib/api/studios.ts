@@ -2,6 +2,9 @@ import { apiRequest } from "./client";
 
 export type StudioType = "Dance" | "Fitness" | "Music" | "Art" | "Yoga";
 
+export type OperationalHoursDay = { open: string; close: string }; // "HH:mm"
+export type OperationalHours = Record<string, OperationalHoursDay>;
+
 export type Studio = {
   id: string;
   name: string;
@@ -12,7 +15,7 @@ export type Studio = {
   images: string[];
   amenities: string[];
   instructors: { id: string; name: string; email: string }[];
-  operationalHours?: Record<string, unknown>;
+  operationalHours?: OperationalHours;
   cancellationPolicy: number;
   createdAt: string;
 };
@@ -35,6 +38,18 @@ export type StudiosQuery = {
   limit?: number;
 };
 
+export type BusyWindow = {
+  start: string; // ISO
+  end: string;   // ISO
+  kind: "booking" | "blockout";
+};
+
+export type AvailabilityResponse = {
+  date: string;
+  operationalHours: OperationalHoursDay | null;
+  busy: BusyWindow[];
+};
+
 export type CreateStudioDto = {
   name: string;
   location: string;
@@ -52,6 +67,15 @@ export async function getOwnerStudios(ownerId: string, page = 1, limit = 50): Pr
 
 export async function getStudioByName(name: string): Promise<Studio> {
   return apiRequest<Studio>(`/studios/by-name/${encodeURIComponent(name)}`);
+}
+
+export async function getStudioAvailability(
+  studioId: string,
+  date: string, // YYYY-MM-DD
+): Promise<AvailabilityResponse> {
+  return apiRequest<AvailabilityResponse>(
+    `/studios/${studioId}/availability?date=${date}`,
+  );
 }
 
 export async function createStudio(dto: CreateStudioDto): Promise<Studio> {

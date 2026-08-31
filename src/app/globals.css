@@ -23,6 +23,13 @@
   --color-text-primary: #ffffff;
   --color-text-secondary: #a1a1aa; /* zinc-400 */
   --color-text-muted: #71717a;     /* zinc-500 */
+
+  /* Calendar + time-slot picker (Phase 5b booking flow) */
+  --color-slot-idle: #1a1a1a;        /* same as bg-input */
+  --color-slot-hover: #262626;       /* zinc-800 */
+  --color-slot-selected: #c2410c;    /* same as brand-btn */
+  --color-slot-busy: #3f1a1a;        /* muted red-ish for "already booked" */
+  --color-slot-disabled: #141414;    /* same as bg-card, appears dead */
 }
 
 * {
