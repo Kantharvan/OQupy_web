@@ -7,7 +7,7 @@
 All OQupy repos (`OQupy_web`, `OQupy_srv`) share a common contract repo at:
 
 ```
-/Users/I532880/Library/MINE/OQupy_shared_content/
+/Users/knvasagam/MINE/OQupy_shared_content/
 ```
 
 This repo is cloned locally alongside the others. **No need to `git pull` every time** — read files directly from disk. Only pull if you suspect the other session has pushed changes you haven't seen yet.
@@ -115,5 +115,5 @@ export default function MyPage() {
 - No shadcn/ui — incompatible with Tailwind v4
 - API base (prod): `https://oqupy-prod.up.railway.app/api/v1`
 - API base (dev): `https://oqupy-dev.up.railway.app/api/v1`
-- Auth: JWT (7d), stored in memory; Redis blacklist on logout
+- Auth: JWT (15m access + 30d refresh), stored in memory; Redis blacklist on logout; silent refresh in `src/lib/api/client.ts`
 - Four roles: `studio_owner` | `instructor` | `student` | `admin`
