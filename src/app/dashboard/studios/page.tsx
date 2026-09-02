@@ -87,6 +87,7 @@ function StudioForm({
   const [price, setPrice] = useState(studio?.price ?? "");
   const [types, setTypes] = useState<StudioType[]>(studio?.type ?? []);
   const [description, setDescription] = useState(studio?.description ?? "");
+  const [imageUrl, setImageUrl] = useState(studio?.images[0] ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -106,6 +107,7 @@ function StudioForm({
         price,
         type: types,
         description: description || undefined,
+        images: imageUrl.trim() ? [imageUrl.trim()] : [],
       };
       if (isEditing) {
         await updateStudio(studio.name, dto);
@@ -171,6 +173,25 @@ function StudioForm({
         rows={2}
         className={`${t.inputField} px-3 py-2 text-sm resize-none`}
       />
+      <div className="flex flex-col gap-1.5">
+        <label className={`text-xs ${t.textMuted}`}>Cover image URL (optional)</label>
+        <input
+          type="url"
+          placeholder="https://…"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          className={`h-10 ${t.inputField} px-3 text-sm`}
+        />
+        {imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt="Preview"
+            className="w-full h-32 object-cover rounded-xl mt-1"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
+        )}
+      </div>
       {formError && <p className="text-red-400 text-xs">{formError}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={isSubmitting} className={`h-10 ${t.btnPrimary} text-sm flex-1`}>
@@ -210,6 +231,29 @@ function StudioPanel({ studio, onUpdated }: { studio: Studio; onUpdated: () => v
 
   return (
     <div className={`${t.cardBox} overflow-hidden`}>
+      {/* Approval status banner */}
+      {studio.approvalStatus === "pending" && (
+        <div className="px-4 py-3 bg-yellow-500/10 border-b border-yellow-500/20 flex items-start gap-2">
+          <span className="text-yellow-400 text-sm shrink-0">⏳</span>
+          <div>
+            <p className={`text-sm font-medium text-yellow-300`}>Pending review</p>
+            <p className={`text-xs text-yellow-400/80 mt-0.5`}>Your studio is under review. It will be visible to users once approved.</p>
+          </div>
+        </div>
+      )}
+      {studio.approvalStatus === "rejected" && (
+        <div className="px-4 py-3 bg-red-500/10 border-b border-red-500/20 flex items-start gap-2">
+          <span className="text-red-400 text-sm shrink-0">✗</span>
+          <div>
+            <p className={`text-sm font-medium text-red-300`}>Not approved</p>
+            {studio.approvalReason && (
+              <p className={`text-xs text-red-400/80 mt-0.5`}>Reason: {studio.approvalReason}</p>
+            )}
+            <p className={`text-xs text-red-400/60 mt-0.5`}>Update your studio details and contact support to re-submit.</p>
+          </div>
+        </div>
+      )}
+
       {/* Studio header row */}
       <div className="p-4 flex items-center gap-4">
         <div className="w-16 h-16 rounded-xl bg-bg-input overflow-hidden shrink-0 flex items-center justify-center">

@@ -5,6 +5,8 @@ export type StudioType = "Dance" | "Fitness" | "Music" | "Art" | "Yoga";
 export type OperationalHoursDay = { open: string; close: string }; // "HH:mm"
 export type OperationalHours = Record<string, OperationalHoursDay>;
 
+export type StudioApprovalStatus = "pending" | "approved" | "rejected";
+
 export type Studio = {
   id: string;
   name: string;
@@ -17,6 +19,9 @@ export type Studio = {
   instructors: { id: string; name: string; email: string }[];
   operationalHours?: OperationalHours;
   cancellationPolicy: number;
+  approvalStatus?: StudioApprovalStatus;
+  approvalReason?: string;
+  published?: boolean;
   createdAt: string;
 };
 

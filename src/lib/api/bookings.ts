@@ -39,6 +39,7 @@ export type CreateBookingDto = {
   eventDescription?: string;
   dateTime: string;
   durationHours: number;
+  isPublic?: boolean;
   clientName?: string;
   clientPhone?: string;
   paymentMethod?: PaymentMethod;

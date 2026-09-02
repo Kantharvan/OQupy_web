@@ -15,6 +15,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { setUser } = useAuth();
   const isReady = phone.length === 10;
+  // Google Sign-In is origin-restricted; Vercel preview URLs aren't whitelisted in Google Cloud Console.
+  const showGoogle = process.env.NEXT_PUBLIC_VERCEL_ENV !== "preview";
 
   async function handleSendOTP(e: React.FormEvent) {
     e.preventDefault();
@@ -94,28 +96,30 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-5">
-          <div className={t.dividerLine} />
-          <span className={`${t.textMuted} text-xs`}>OR</span>
-          <div className={t.dividerLine} />
-        </div>
-
-        {/* Google */}
-        {googleError && (
-          <p className="text-red-400 text-sm text-center mb-3">{googleError}</p>
+        {/* Divider + Google — hidden on Vercel preview (unregistered origin) */}
+        {showGoogle && (
+          <>
+            <div className="flex items-center gap-3 my-5">
+              <div className={t.dividerLine} />
+              <span className={`${t.textMuted} text-xs`}>OR</span>
+              <div className={t.dividerLine} />
+            </div>
+            {googleError && (
+              <p className="text-red-400 text-sm text-center mb-3">{googleError}</p>
+            )}
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setGoogleError("Google sign-in was cancelled or failed.")}
+                theme="filled_black"
+                shape="rectangular"
+                size="large"
+                text="continue_with"
+                width="360"
+              />
+            </div>
+          </>
         )}
-        <div className="flex justify-center">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => setGoogleError("Google sign-in was cancelled or failed.")}
-            theme="filled_black"
-            shape="rectangular"
-            size="large"
-            text="continue_with"
-            width="360"
-          />
-        </div>
       </div>
     </main>
   );
