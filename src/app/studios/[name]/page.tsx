@@ -277,8 +277,7 @@ function BookingFlow({ studio, userRole }: { studio: Studio; userRole: string | 
 
   const slots = useMemo(() => {
     if (!availability || !selectedDay) return [] as SlotInfo[];
-    const { operationalHours, busy } = availability;
-    const hours = operationalHours ?? { open: "08:00", close: "22:00" };
+    const { operationalHours: hours, busy } = availability;
 
     const open = parse(hours.open, "HH:mm", selectedDay);
     const close = parse(hours.close, "HH:mm", selectedDay);

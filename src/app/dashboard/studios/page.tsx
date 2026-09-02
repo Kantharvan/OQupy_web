@@ -2,11 +2,18 @@
 
 import { useEffect, useState, useCallback, useTransition } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getOwnerStudios, createStudio, updateStudio, type Studio, type StudioType, type CreateStudioDto } from "@/lib/api/studios";
+import { getOwnerStudios, createStudio, updateStudio, type Studio, type StudioType, type CreateStudioDto, type OperationalHours } from "@/lib/api/studios";
 import { getBlockoutsByStudio, createBlockout, deleteBlockout, type Blockout, type CreateBlockoutDto, type RecurringType, type DayOfWeek } from "@/lib/api/blockouts";
 import { t } from "@/styles/tokens";
 
 const STUDIO_TYPES: StudioType[] = ["Dance", "Fitness", "Music", "Art", "Yoga"];
+
+const WEEK_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+type WeekDay = typeof WEEK_DAYS[number];
+
+function defaultHours(): OperationalHours {
+  return Object.fromEntries(WEEK_DAYS.map((d) => [d, { open: "08:00", close: "22:00" }]));
+}
 
 export default function DashboardStudiosPage() {
   const { user } = useAuth();
@@ -90,6 +97,18 @@ function StudioForm({
   const [imageUrl, setImageUrl] = useState(studio?.images[0] ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [hours, setHours] = useState<OperationalHours>(
+    studio?.operationalHours ?? defaultHours()
+  );
+  const [sameAllDays, setSameAllDays] = useState(true);
+
+  function setDayHours(day: WeekDay, field: "open" | "close", value: string) {
+    if (sameAllDays) {
+      setHours(Object.fromEntries(WEEK_DAYS.map((d) => [d, { ...hours[d], [field]: value }])));
+    } else {
+      setHours((prev) => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
+    }
+  }
 
   function toggleType(type: StudioType) {
     setTypes((prev) => (prev.includes(type) ? prev.filter((x) => x !== type) : [...prev, type]));
@@ -108,6 +127,7 @@ function StudioForm({
         type: types,
         description: description || undefined,
         images: imageUrl.trim() ? [imageUrl.trim()] : [],
+        operationalHours: hours,
       };
       if (isEditing) {
         await updateStudio(studio.name, dto);
@@ -173,6 +193,61 @@ function StudioForm({
         rows={2}
         className={`${t.inputField} px-3 py-2 text-sm resize-none`}
       />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <label className={`text-xs ${t.textMuted}`}>Operating hours</label>
+          <button
+            type="button"
+            onClick={() => setSameAllDays((v) => !v)}
+            className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
+              sameAllDays
+                ? "border-brand bg-brand-btn text-white"
+                : `${t.borderInput} ${t.textSecondary} hover:border-zinc-500`
+            }`}
+          >
+            {sameAllDays ? "Same every day" : "Per day"}
+          </button>
+        </div>
+        {sameAllDays ? (
+          <div className="flex gap-3 items-center">
+            <span className={`text-xs ${t.textSecondary} w-16`}>All days</span>
+            <input
+              type="time"
+              value={hours["monday"]?.open ?? "08:00"}
+              onChange={(e) => setDayHours("monday", "open", e.target.value)}
+              className={`h-9 ${t.inputField} px-2 text-sm`}
+            />
+            <span className={`text-xs ${t.textMuted}`}>to</span>
+            <input
+              type="time"
+              value={hours["monday"]?.close ?? "22:00"}
+              onChange={(e) => setDayHours("monday", "close", e.target.value)}
+              className={`h-9 ${t.inputField} px-2 text-sm`}
+            />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {WEEK_DAYS.map((day) => (
+              <div key={day} className="flex gap-3 items-center">
+                <span className={`text-xs ${t.textSecondary} w-16 capitalize`}>{day.slice(0, 3)}</span>
+                <input
+                  type="time"
+                  value={hours[day]?.open ?? "08:00"}
+                  onChange={(e) => setDayHours(day, "open", e.target.value)}
+                  className={`h-9 ${t.inputField} px-2 text-sm`}
+                />
+                <span className={`text-xs ${t.textMuted}`}>to</span>
+                <input
+                  type="time"
+                  value={hours[day]?.close ?? "22:00"}
+                  onChange={(e) => setDayHours(day, "close", e.target.value)}
+                  className={`h-9 ${t.inputField} px-2 text-sm`}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="flex flex-col gap-1.5">
         <label className={`text-xs ${t.textMuted}`}>Cover image URL (optional)</label>
         <input
