@@ -9,6 +9,7 @@ const NAV = [
   { href: "/dashboard", label: "Overview", exact: true },
   { href: "/dashboard/studios", label: "My Studios", exact: false },
   { href: "/dashboard/bookings", label: "Bookings", exact: false },
+  { href: "/dashboard/profile", label: "Profile", exact: false },
 ];
 
 const ADMIN_NAV = { href: "/dashboard/admin", label: "Admin", exact: false };
