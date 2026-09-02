@@ -2,6 +2,8 @@ import { apiRequest } from "./client";
 
 export type BookingStatus = "AwaitingApproval" | "Confirmed" | "Cancelled" | "Completed";
 export type BookingType = "instructor_event" | "student_practice" | "owner_event";
+export type PaymentMethod = "upi" | "netbanking" | "card" | "wallet";
+export type PaymentStatus = "Pending" | "Paid" | "Refunded";
 
 export type Booking = {
   id: string;
@@ -17,8 +19,8 @@ export type Booking = {
   isPublic: boolean;
   clientName?: string;
   clientPhone?: string;
-  paymentMethod?: string;
-  paymentStatus?: string;
+  paymentMethod?: PaymentMethod;
+  paymentStatus?: PaymentStatus;
   paymentAmount?: number;
   createdAt: string;
 };
@@ -39,6 +41,9 @@ export type CreateBookingDto = {
   durationHours: number;
   clientName?: string;
   clientPhone?: string;
+  paymentMethod?: PaymentMethod;
+  paymentStatus?: PaymentStatus;
+  paymentAmount?: number;
 };
 
 export async function getBookingsByStudio(studioId: string, page = 1, limit = 20): Promise<BookingsResponse> {

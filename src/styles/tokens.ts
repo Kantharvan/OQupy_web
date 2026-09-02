@@ -48,4 +48,29 @@ export const t = {
 
   /** OR divider line */
   dividerLine: "flex-1 h-px bg-border",
+
+  // ── Calendar + time-slot picker (Phase 5b) ──────────────────
+  /** react-day-picker root — outer container */
+  calendarRoot: "text-white text-sm",
+  /** react-day-picker month caption ("May 2027") */
+  calendarCaption: "text-sm font-semibold text-white mb-2",
+  /** react-day-picker weekday header row (Mo Tu We ...) */
+  calendarHead: "text-xs text-text-muted uppercase",
+  /** Base day cell — button styling */
+  dayCell: "w-9 h-9 text-sm rounded-lg hover:bg-slot-hover transition-colors",
+  /** Selected day */
+  dayCellSelected: "bg-slot-selected text-white hover:bg-slot-selected",
+  /** Today's date, when not selected */
+  dayCellToday: "text-brand font-semibold",
+  /** Fully-booked or blocked day */
+  dayCellDisabled: "text-text-muted opacity-40 cursor-not-allowed line-through",
+
+  /** Time slot pill — base */
+  timeSlot: "h-9 px-3 text-xs rounded-lg bg-slot-idle border border-border-input text-white hover:bg-slot-hover transition-colors",
+  /** Selected slot */
+  timeSlotSelected: "bg-slot-selected border-slot-selected text-white hover:bg-slot-selected",
+  /** Busy (already booked/blocked) slot */
+  timeSlotBusy: "bg-slot-busy border-slot-busy text-text-muted cursor-not-allowed opacity-70",
+  /** Outside operational hours / not applicable */
+  timeSlotDisabled: "bg-slot-disabled border-border text-text-muted cursor-not-allowed opacity-40",
 } as const;
