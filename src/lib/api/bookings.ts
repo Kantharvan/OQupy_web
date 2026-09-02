@@ -50,6 +50,10 @@ export async function getBookingsByStudio(studioId: string, page = 1, limit = 20
   return apiRequest<BookingsResponse>(`/bookings/studio/${studioId}?page=${page}&limit=${limit}`);
 }
 
+export async function getUserBookings(userId: string, page = 1, limit = 50): Promise<BookingsResponse> {
+  return apiRequest<BookingsResponse>(`/bookings/user/${userId}?page=${page}&limit=${limit}`);
+}
+
 export async function createBooking(dto: CreateBookingDto): Promise<Booking> {
   return apiRequest<Booking>("/bookings", { method: "POST", body: dto });
 }

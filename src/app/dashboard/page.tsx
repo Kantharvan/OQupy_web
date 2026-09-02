@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getOwnerStudios, type Studio } from "@/lib/api/studios";
-import { getBookingsByStudio, type Booking } from "@/lib/api/bookings";
+import { getBookingsByStudio, getUserBookings, type Booking } from "@/lib/api/bookings";
 import { t } from "@/styles/tokens";
 import Link from "next/link";
 
@@ -25,7 +25,84 @@ function startOf(range: RevenueRange): Date | null {
   return null;
 }
 
-export default function DashboardOverviewPage() {
+// ── Student / Instructor overview ─────────────────────────────────────────────
+
+function MyOverview() {
+  const { user } = useAuth();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    getUserBookings(user.id, 1, 10)
+      .then((res) => {
+        setBookings(res.data.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()));
+      })
+      .finally(() => setIsLoading(false));
+  }, [user]);
+
+  const firstName = user?.name?.split(" ")[0] ?? "there";
+  const upcoming = bookings.filter((b) => b.status === "Confirmed" && new Date(b.dateTime) > new Date()).length;
+
+  return (
+    <div className="max-w-5xl">
+      <h2 className={`text-2xl font-bold ${t.textPrimary} mb-1`}>Hey, {firstName} 👋</h2>
+      <p className={`${t.textMuted} text-sm mb-8`}>Here&apos;s a look at your recent activity.</p>
+
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <Link href="/dashboard/bookings">
+          <div className={`${t.cardBox} p-5`}>
+            <p className={`text-2xl font-bold ${t.textPrimary}`}>{isLoading ? "—" : bookings.length}</p>
+            <p className={`text-xs ${t.textMuted} mt-1`}>Recent Bookings</p>
+          </div>
+        </Link>
+        <Link href="/dashboard/bookings">
+          <div className={`${t.cardBox} p-5 ${upcoming > 0 ? "border-green-500/30" : ""}`}>
+            <p className={`text-2xl font-bold ${upcoming > 0 ? "text-green-400" : t.textPrimary}`}>{isLoading ? "—" : upcoming}</p>
+            <p className={`text-xs ${t.textMuted} mt-1`}>Upcoming</p>
+          </div>
+        </Link>
+      </div>
+
+      <div className={`${t.cardBox} p-6`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={`font-semibold ${t.textPrimary}`}>Recent Bookings</h3>
+          <Link href="/dashboard/bookings" className={`text-xs ${t.link}`}>View all →</Link>
+        </div>
+        {isLoading ? (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-10 bg-bg-input rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : bookings.length === 0 ? (
+          <div className="text-center py-4">
+            <p className={`text-sm ${t.textMuted} mb-3`}>No bookings yet.</p>
+            <Link href="/studios" className={`text-sm ${t.link}`}>Browse studios →</Link>
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border">
+            {bookings.slice(0, 5).map((b) => (
+              <div key={b.id} className="py-3 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className={`text-sm font-medium ${t.textPrimary} truncate`}>{b.eventName}</p>
+                  <p className={`text-xs ${t.textMuted}`}>
+                    {b.studioName} · {new Date(b.dateTime).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                  </p>
+                </div>
+                <StatusBadge status={b.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Owner overview ─────────────────────────────────────────────────────────────
+
+function OwnerOverview() {
   const { user } = useAuth();
   const [studios, setStudios] = useState<Studio[]>([]);
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
@@ -65,11 +142,9 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="max-w-5xl">
-      {/* Greeting */}
       <h2 className={`text-2xl font-bold ${t.textPrimary} mb-1`}>Hey, {firstName} 👋</h2>
       <p className={`${t.textMuted} text-sm mb-8`}>Here&apos;s what&apos;s happening with your studios.</p>
 
-      {/* Studios */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-3">
           <h3 className={`text-sm font-semibold ${t.textSecondary} uppercase tracking-wider`}>Your Studio</h3>
@@ -105,7 +180,6 @@ export default function DashboardOverviewPage() {
         )}
       </section>
 
-      {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <Link href="/dashboard/bookings">
           <div className={`${t.cardBox} p-5`}>
@@ -121,7 +195,6 @@ export default function DashboardOverviewPage() {
         </Link>
       </div>
 
-      {/* Revenue */}
       <section className="mb-8">
         <div className={`${t.cardBox} p-6`}>
           <div className="flex items-center justify-between mb-4">
@@ -148,7 +221,6 @@ export default function DashboardOverviewPage() {
         </div>
       </section>
 
-      {/* Recent bookings */}
       <div className={`${t.cardBox} p-6`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`font-semibold ${t.textPrimary}`}>Recent Bookings</h3>
@@ -180,6 +252,12 @@ export default function DashboardOverviewPage() {
       </div>
     </div>
   );
+}
+
+export default function DashboardOverviewPage() {
+  const { user } = useAuth();
+  if (user?.role === "studio_owner") return <OwnerOverview />;
+  return <MyOverview />;
 }
 
 function StudioCard({ studio }: { studio: Studio }) {

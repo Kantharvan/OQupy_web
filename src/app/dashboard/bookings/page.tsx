@@ -4,7 +4,14 @@ import { useEffect, useState, useCallback, useTransition, Suspense } from "react
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getOwnerStudios, type Studio } from "@/lib/api/studios";
-import { getBookingsByStudio, confirmBooking, cancelBooking, type Booking, type BookingStatus } from "@/lib/api/bookings";
+import {
+  getBookingsByStudio,
+  getUserBookings,
+  confirmBooking,
+  cancelBooking,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/api/bookings";
 import { t } from "@/styles/tokens";
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
@@ -21,7 +28,9 @@ const STATUS_COLORS: Record<BookingStatus, string> = {
   Completed: "bg-blue-500/15 text-blue-400",
 };
 
-function DashboardBookingsContent() {
+// ── Owner view ────────────────────────────────────────────────────────────────
+
+function OwnerBookingsContent() {
   const searchParams = useSearchParams();
   const preselectedStudioId = searchParams.get("studioId");
   const { user } = useAuth();
@@ -85,7 +94,6 @@ function DashboardBookingsContent() {
         <p className={`text-sm ${t.textMuted} mt-0.5`}>Review and manage booking requests.</p>
       </div>
 
-      {/* Studio selector */}
       {!isLoadingStudios && studios.length > 0 && (
         <div className="flex gap-2 flex-wrap mb-6">
           {studios.map((s) => (
@@ -161,10 +169,87 @@ function DashboardBookingsContent() {
   );
 }
 
+// ── Student / Instructor view ─────────────────────────────────────────────────
+
+function MyBookingsContent() {
+  const { user } = useAuth();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    getUserBookings(user.id)
+      .then((res) => {
+        setBookings(res.data.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()));
+      })
+      .finally(() => setIsLoading(false));
+  }, [user]);
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className={`text-xl font-bold ${t.textPrimary}`}>My Bookings</h2>
+        <p className={`text-sm ${t.textMuted} mt-0.5`}>All your studio bookings and their status.</p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className={`${t.cardBox} h-20 animate-pulse`} />
+          ))}
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className={`${t.cardBox} p-10 text-center`}>
+          <p className="text-4xl mb-3">📅</p>
+          <p className={`${t.textPrimary} font-semibold`}>No bookings yet</p>
+          <p className={`text-sm ${t.textMuted} mt-1`}>Browse studios to make your first booking.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {bookings.map((b) => (
+            <div key={b.id} className={`${t.cardBox} p-4`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <p className={`font-semibold text-sm ${t.textPrimary}`}>{b.eventName}</p>
+                    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${STATUS_COLORS[b.status]}`}>
+                      {STATUS_LABELS[b.status]}
+                    </span>
+                  </div>
+                  <p className={`text-sm font-medium ${t.textSecondary}`}>{b.studioName}</p>
+                  <p className={`text-xs ${t.textMuted} mt-0.5`}>
+                    {new Date(b.dateTime).toLocaleDateString("en-IN", {
+                      weekday: "short", day: "numeric", month: "short", year: "numeric",
+                    })}
+                    {" · "}
+                    {new Date(b.dateTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                    {" · "}{b.durationHours}h
+                  </p>
+                  {b.paymentAmount && (
+                    <p className={`text-xs ${t.brandText} mt-1`}>₹{b.paymentAmount}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Router ────────────────────────────────────────────────────────────────────
+
+function BookingsRouter() {
+  const { user } = useAuth();
+  if (user?.role === "studio_owner") return <OwnerBookingsContent />;
+  return <MyBookingsContent />;
+}
+
 export default function DashboardBookingsPage() {
   return (
     <Suspense>
-      <DashboardBookingsContent />
+      <BookingsRouter />
     </Suspense>
   );
 }
