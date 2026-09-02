@@ -1,0 +1,34 @@
+name: Nightly Smoke
+
+on:
+  schedule:
+    - cron: '15 1 * * *' # 01:15 UTC = 06:45 IST (staggered after srv smoke)
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Live frontend smoke test
+    runs-on: ubuntu-latest
+
+    env:
+      WEB: https://oqupy-web.vercel.app
+      API: https://oqupy-prod.up.railway.app/api/v1
+
+    steps:
+      - name: Homepage loads
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L "$WEB")
+          [ "$STATUS" = "200" ] || (echo "Homepage failed: $STATUS" && exit 1)
+
+      - name: Studios browse page loads
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L "$WEB/studios")
+          [ "$STATUS" = "200" ] || (echo "/studios page failed: $STATUS" && exit 1)
+
+      - name: Availability API reachable from booking flow
+        run: |
+          STUDIO_ID=$(curl -s "$API/studios?limit=1" | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])")
+          DATE=$(date -u +%Y-%m-%d -d "+1 day" 2>/dev/null || date -u -v+1d +%Y-%m-%d)
+          BODY=$(curl -s "$API/studios/$STUDIO_ID/availability?date=$DATE")
+          echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'busy' in d, 'missing busy field'" \
+            || (echo "Availability response malformed: $BODY" && exit 1)
