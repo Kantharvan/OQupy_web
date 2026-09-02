@@ -51,7 +51,7 @@ export type BusyWindow = {
 
 export type AvailabilityResponse = {
   date: string;
-  operationalHours: OperationalHoursDay | null;
+  operationalHours: OperationalHoursDay;
   busy: BusyWindow[];
 };
 
@@ -64,6 +64,7 @@ export type CreateStudioDto = {
   images?: string[];
   amenities?: string[];
   cancellationPolicy?: number;
+  operationalHours: OperationalHours;
 };
 
 export async function getOwnerStudios(ownerId: string, page = 1, limit = 50): Promise<StudiosResponse> {

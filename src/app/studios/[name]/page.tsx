@@ -277,11 +277,10 @@ function BookingFlow({ studio, userRole }: { studio: Studio; userRole: string | 
 
   const slots = useMemo(() => {
     if (!availability || !selectedDay) return [] as SlotInfo[];
-    const { operationalHours, busy } = availability;
-    if (!operationalHours) return [];
+    const { operationalHours: hours, busy } = availability;
 
-    const open = parse(operationalHours.open, "HH:mm", selectedDay);
-    const close = parse(operationalHours.close, "HH:mm", selectedDay);
+    const open = parse(hours.open, "HH:mm", selectedDay);
+    const close = parse(hours.close, "HH:mm", selectedDay);
     const now = new Date();
     const busyIntervals = busy.map((b) => ({ start: new Date(b.start), end: new Date(b.end) }));
 
@@ -392,8 +391,6 @@ function BookingFlow({ studio, userRole }: { studio: Studio; userRole: string | 
             <p className={`text-sm ${t.textMuted}`}>Loading availability…</p>
           ) : availabilityError ? (
             <p className="text-sm text-red-400">{availabilityError}</p>
-          ) : availability && !availability.operationalHours ? (
-            <p className={`text-sm ${t.textMuted}`}>Studio is closed on {format(selectedDay, "EEEE")}. Pick a different day.</p>
           ) : slots.length === 0 ? (
             <p className={`text-sm ${t.textMuted}`}>No slots available.</p>
           ) : (
