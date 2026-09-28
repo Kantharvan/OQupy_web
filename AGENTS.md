@@ -4,7 +4,7 @@
 
 This repository is the Next.js web client for OQupy, a creative-space marketplace for studio owners, instructors, students, and admins. It consumes the separate OQupy_srv REST API; it does not contain that backend.
 
-Read `CLAUDE.md`, `docs/flow.md`, and the relevant source before changing behavior. When available, read sibling `../OQupy_shared_content/contracts/`, `roles/roles.md`, and `webapp-notes.md` before API changes. Coordinate contract updates with the backend. That sibling checkout is not guaranteed in cloud environments. Older notes contain outdated URLs, role flows, and token-storage descriptions: verify against implementation and report discrepancies rather than silently changing contracts.
+Read `CLAUDE.md`, `docs/flow.md`, and the relevant source before changing behavior. When available, read sibling `../OQupy_shared_content/contracts/`, `roles/roles.md`, and `webapp-notes.md` before API changes. Coordinate contract updates with the backend. That sibling checkout is not guaranteed in cloud environments. Shared notes and historical review records may describe earlier implementations: verify against current source and report discrepancies rather than silently changing contracts.
 
 ## Architecture and conventions
 
@@ -14,8 +14,8 @@ Read `CLAUDE.md`, `docs/flow.md`, and the relevant source before changing behavi
 - Access tokens live in memory. Refresh tokens also persist under localStorage key `oqupy_refresh`; refresh returns only a new access token. Do not implement the older notes' assumption that both tokens rotate or are memory-only.
 - `src/context/`: auth state and Google provider. Confirm actual role/null-role routing in components and backend contracts; do not infer permission enforcement from UI visibility.
 - Public discovery starts at `/studios` (the root redirects there). Shared public UI lives in `src/components/ui/`, `studios/`, and `booking/`; booking rules and safe auth return paths live in `src/lib/booking/`. Preserve the selected date/time/duration through login and onboarding.
-- Public, auth and dashboard routes share `SiteHeader`, global colour tokens and reusable controls. Auth pages use `AuthShell`; dashboard pages use the role-aware workspace layout, `PageHeading`, `BookingCard` and `BlockoutsPanel`. `t` in `@/styles/tokens` points to the shared surface/control classes. Extend these components rather than introducing a parallel design system. The older blanket token-only guidance in `CLAUDE.md` is outdated.
-- Session lengths accept 0.5–24 hours in half-hour increments and must fit the complete available interval. Display 12-hour AM/PM times while retaining API `HH:mm` operating hours and ISO booking timestamps in IST. Use `TimeSelect` for editable operating/blockout times. UI role guards improve navigation but do not replace backend authorization.
+- Public, auth and dashboard routes share `SiteHeader`, global colour tokens and reusable controls. Auth pages use `AuthShell`; dashboard pages use the role-aware workspace layout, `PageHeading`, `BookingCard` and `BlockoutsPanel`. `t` in `@/styles/tokens` points to the shared surface/control classes. Extend these components rather than introducing a parallel design system. `CLAUDE.md` points to these shared conventions.
+- Session lengths accept 0.5–24 hours in half-hour increments and must fit the complete available interval. Display 12-hour AM/PM times while retaining API `HH:mm` operating hours and ISO booking timestamps derived from IST selections. Use `TimeSelect` for editable operating/blockout times. UI role guards improve navigation but do not replace backend authorization.
 - Keep temporary screenshots under ignored `screenshots/` or Playwright `test-results/`. Deliberate, sanitized PR review screenshots and limitations can be committed under `docs/review/`, as in `docs/review/studio-booking/`.
 - Booking submits a request awaiting approval and collects no payment. Legacy price parsing and full-duration slot checks live in `src/lib/booking/`; malformed/zero rates block requests. Times are explicitly IST, not the visitor timezone. Server-calculated prices and studio-local availability day boundaries remain follow-ups documented in `docs/review/studio-booking/README.md`; frontend validation does not enforce server security.
 
@@ -24,11 +24,11 @@ Read `CLAUDE.md`, `docs/flow.md`, and the relevant source before changing behavi
 | Mode | API target and configuration |
 | --- | --- |
 | Fully local | Frontend at `http://localhost:3000`; explicitly set `NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1`. Backend, PostgreSQL and Redis must be started separately or with the backend launcher. |
-| Local UI against hosted dev | `CLAUDE.md` documents `https://oqupy-dev.up.railway.app/api/v1`. Set that URL explicitly and verify the backend CORS allowlist and dev service availability. This uses remote data, not a local sandbox. |
+| Local UI against hosted dev | The documented hosted dev target is `https://oqupy-dev.up.railway.app/api/v1`. Set that URL explicitly and verify the backend CORS allowlist and dev service availability. This uses remote data, not a local sandbox. |
 | Production | `.github/workflows/smoke.yml` targets `https://oqupy-web.vercel.app` and `https://oqupy-prod.up.railway.app/api/v1`. The API client also defaults to this production API when its variable is absent. |
 | Preview | Vercel project settings control preview variables and branch mappings; these settings are not committed here. Verify the selected API and corresponding backend CORS before testing. |
 
-These are repository-documented targets, not a guarantee of current hosting-dashboard state or service health. No Vercel deployment workflow/configuration is committed. CI tests pushes/PRs to main; do not equate that with a verified hosting branch mapping. The older `oqupysrv-production` URL in context/shared notes is not the target used by current client/smoke configuration.
+These are repository-documented targets, not a guarantee of current hosting-dashboard state or service health. No Vercel deployment workflow/configuration is committed. CI tests pushes/PRs to main; do not equate that with a verified hosting branch mapping. Historical shared notes may reference other URLs; current client/smoke configuration defines the repository target.
 
 ## Local setup
 

@@ -1,62 +1,33 @@
-# OQupy Web — Build Progress
+# Oqupy web — Status and remaining work
 
-## Phase 0 — Project Scaffold ✅
-- Next.js 16, TypeScript strict, Tailwind CSS v4, ESLint, App Router, src/ directory
-- `docs/` folder with context, decisions, progress, flow
+Updated 2026-09-28 after [PR #14](https://github.com/Kantharvan/OQupy_web/pull/14). This is a dated implementation/verification record, not a continuous health monitor.
 
-## Phase 0.5 — Design System ✅
-- Design tokens set in `src/app/globals.css` using Tailwind v4 `@theme`
-- Color palette locked: `#0a0a0a` page bg · `#141414` card · `#1a1a1a` input · `#c2410c` CTA btn · `#f97316` brand/logo
-- `src/styles/tokens.ts` — single source of truth for all Tailwind class shortcuts
-- All pages use `import { t } from "@/styles/tokens"` — no hardcoded hex in components
-- Root `/` redirects to `/login`
-- No shadcn/ui — incompatible with Tailwind v4
+## Shipped
 
-## Phase 1 — Auth Flow ✅
-- `src/app/(auth)/login/page.tsx` — phone +91 input + Google Sign-In; calls `POST /auth/send-otp` before navigating to `/verify-otp`; shows loading state + error on failure
-- `src/app/(auth)/verify-otp/page.tsx` — 6-box OTP input, paste, auto-advance, backspace nav, 30s resend countdown, post-verify routing by role
-- `src/app/(onboarding)/page.tsx` — role picker (student / instructor / studio_owner / admin), calls `PATCH /users/:id`; routes to correct destination after role set
-- `src/lib/api/auth.ts` — `sendOTP`, `verifyOTP`, `googleAuth`, `getMe`, `logout`
-- `src/lib/api/users.ts` — `updateUserRole`
-- `src/lib/api/client.ts` — `apiRequest` with auth headers, silent 401 refresh, redirect on session expiry
-- `src/context/AuthContext.tsx` — in-memory token store, user state, boots via `GET /auth/me`
-- `src/context/GoogleProvider.tsx` — wraps app for Google Sign-In SDK
-- Removed deprecated `src/middleware.ts` (Next.js 16 renamed to `proxy`; was a no-op anyway)
+- Public discovery, search, studio details and availability-aware booking requests.
+- OTP/Google authentication, profile completion and retained booking intent.
+- Custom 0.5–24-hour sessions in half-hour increments, AM/PM display and IST conversion.
+- Shared dark UI across authentication and all workspace pages: overview, bookings, profile, studios, availability and admin.
+- Owner operating-hour controls and timed/recurring blockouts; admin listing review and role management.
+- Shared cards, controls and layouts, with deeper orange accents and Google dark-button styling.
+- PR-based validation with lint, TypeScript, production build and behavior-focused browser tests.
 
-## Fix — OTP Not Sent Before Navigation ✅
-- Login page was navigating to `/verify-otp` without calling `POST /auth/send-otp`
-- Fixed: `handleSendOTP` now async, calls `sendOTP(phone)` first, shows error on failure, button shows "Sending…" state
+## Evidence at PR #14
 
-## Dev Helpers (remove before production)
+38 Playwright cases passed across desktop IST and mobile America/New_York. The custom-duration regression test failed when the old fixed-duration restriction was restored and passed with the implementation. See [review screenshots and boundaries](review/unified-app/README.md).
 
-- `src/app/api/dev/otp/route.ts` — API route that reads OTP from Railway Redis via `redis-cli`; only active in `NODE_ENV=development`; returns `{ otp }` for a given phone number
-- `verify-otp` page polls `/api/dev/otp` every 3s and shows a yellow toast with the OTP + an "autofill" button
-- `REDIS_URL` in `.env.local` — **TODO: remove from `.env.local` before any production deploy; use Railway env vars only**
+The merged commit `9a4710116667e9c2eb9d62be4772fc06ebaec210` passed [main CI](https://github.com/Kantharvan/OQupy_web/actions/runs/36462273446), and Vercel reported deployment success. A subsequent production read-only check confirmed discovery, 1.5-hour availability, AM/PM labels, the ₹900 estimate at ₹600/hour, retained login return parameters, the new login design and Google's button without the white surround. Backend health reported database and Redis OK.
 
----
+A completed real OAuth/OTP → booking → authenticated dashboard walkthrough was not performed against production. Automated workspace tests used fixtures. No production booking or account mutation was made during verification.
 
-## Upcoming Phases
+## Remaining work
 
-| Phase | Feature | Status |
-|-------|---------|--------|
-| 0 | Scaffold + design system | ✅ Done |
-| 1 | Auth flow (login / OTP / Google / onboarding) | ✅ Done |
-| 2 | Studios list (`/studios`) — student landing | ✅ Done |
-| 3 | Dashboard (`/dashboard`) — owner + instructor + admin | ✅ Done |
-| 4 | Admin panel (`/dashboard/admin`) — role assignment | ✅ Done (partial — expand as needed) |
-| 5 | Studio detail (`/studios/[name]`) + booking requests | ✅ Done |
-| 5b | Full booking flow (calendar picker, payment) | Pending |
-| 6 | User profile + settings | Pending |
-| 7 | Blockouts management UI (`/dashboard/blockouts`) | ✅ Done |
+- Calculate and validate booking prices on the server rather than accepting client `paymentAmount` as authoritative.
+- Query availability using studio-local day boundaries, including intervals beginning on a preceding day; resolve all-day/recurrence semantics with the backend.
+- Add browser-to-real-backend integration coverage against disposable services for those contracts.
+- Complete a controlled authenticated walkthrough for each role, including real Google OAuth on a registered origin.
+- Design and implement payment collection/refunds separately; current payment fields are placeholders.
+- Review production listing data/photos; sample-looking listings remain visible.
+- Verify required CI checks and merge/deployment gates in repository/provider settings. The last documented GitHub observation showed main protected but an empty required-check list; see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-## Last synced with reality: 2026-08-31
-
-Ships since Aug 3 (PRs #3–#5 merged):
-- Owner Add Studio form + studio edit
-- Public studios browse page
-- Studio detail page (`/studios/[name]`)
-- Booking requests with admin approval flow
-- Admin dashboard for role assignment (self-service onboarding removed)
-- Blockouts page in dashboard
-- API clients: `admin.ts`, `blockouts.ts`, `bookings.ts`, `studios.ts`, `users.ts`
-
+The development OTP helper requires a server-only Redis URL and returns 404 outside development. Keep it confined to a disposable local backend; it is not a production login mechanism. See [AGENTS.md](../AGENTS.md).
