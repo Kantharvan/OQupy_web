@@ -123,7 +123,7 @@ function StudiosContent() {
               {location}
             </span>
             <button
-              className="text-orange-300 underline underline-offset-4"
+              className="text-brand-soft underline underline-offset-4"
               onClick={() => navigate(new URLSearchParams())}
             >
               Clear filters
@@ -161,7 +161,7 @@ function StudiosContent() {
           </div>
         ) : (
           <section className="empty-state">
-            <span className="text-4xl text-orange-300" aria-hidden="true">
+            <span className="text-4xl text-brand-soft" aria-hidden="true">
               ⌕
             </span>
             <h3>

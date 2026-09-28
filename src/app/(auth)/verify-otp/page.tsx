@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { t } from "@/styles/tokens";
 import { studioReturnPath } from "@/lib/booking/return-path";
 import { sendOTP, verifyOTP } from "@/lib/api/auth";
@@ -157,8 +158,9 @@ function VerifyOTPContent() {
   const filled = otp.join("").length === OTP_LENGTH;
 
   return (
-    <main
-      className={`min-h-screen ${t.page} flex flex-col items-center justify-center px-4`}
+    <AuthShell
+      title="Verify OTP"
+      description={`Enter the code sent to ${masked}.`}
     >
       {/* Dev OTP toast */}
       {IS_DEV && devOtp && (
@@ -192,80 +194,60 @@ function VerifyOTPContent() {
         </div>
       )}
 
-      <div className="mb-8 text-center">
-        <h1
-          className={`text-5xl font-black tracking-widest ${t.brandText} uppercase`}
-        >
-          OQupy
-        </h1>
-        <p className={`mt-3 ${t.textPrimary} text-base font-medium`}>
-          Enter the code sent to your phone
-        </p>
-        <p className={`mt-1 ${t.textSecondary} text-sm`}>{masked}</p>
-      </div>
-
-      <div className={`w-full max-w-sm ${t.cardBox} p-8`}>
-        <h2
-          className={`text-xl font-semibold ${t.textPrimary} text-center mb-6`}
-        >
-          Verify OTP
-        </h2>
-
-        <form onSubmit={handleVerify} className="flex flex-col gap-5">
-          <div className="flex gap-2 justify-between" onPaste={handlePaste}>
-            {otp.map((digit, i) => (
-              <input
-                key={i}
-                ref={(el) => {
-                  inputRefs.current[i] = el;
-                }}
-                aria-label={`Code digit ${i + 1}`}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleChange(i, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(i, e)}
-                className={`min-w-0 w-full h-13 ${t.input} border ${t.borderInput} rounded-xl text-white text-xl font-bold text-center outline-none focus:border-brand transition-colors`}
-              />
-            ))}
-          </div>
-
-          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-
-          <p className={`${t.textMuted} text-sm text-center`}>
-            Enter the 6-digit code we sent you.
-          </p>
-
-          <button
-            type="submit"
-            disabled={!filled || isSubmitting}
-            className={`w-full h-13 ${t.btnPrimary}`}
-          >
-            {isSubmitting ? "Verifying…" : "Verify OTP"}
-          </button>
-        </form>
-
-        <div className="mt-5 text-center">
-          <p className={`${t.textSecondary} text-sm`}>
-            Didn&apos;t receive the code?
-          </p>
-          <button
-            onClick={handleResend}
-            disabled={!canResend || isResending}
-            className={`mt-1 text-sm font-medium transition-colors ${
-              canResend
-                ? `${t.brandText} hover:text-[#fb923c]`
-                : `${t.textMuted} cursor-not-allowed`
-            }`}
-          >
-            {isResending
-              ? "Sending…"
-              : canResend
-                ? "Resend OTP"
-                : `Resend OTP (${countdown}s)`}
-          </button>
+      <form onSubmit={handleVerify} className="flex flex-col gap-5">
+        <div className="flex gap-2 justify-between" onPaste={handlePaste}>
+          {otp.map((digit, i) => (
+            <input
+              key={i}
+              ref={(el) => {
+                inputRefs.current[i] = el;
+              }}
+              aria-label={`Code digit ${i + 1}`}
+              type="text"
+              inputMode="numeric"
+              maxLength={1}
+              value={digit}
+              onChange={(e) => handleChange(i, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(i, e)}
+              className={`min-w-0 w-full h-13 ${t.input} border ${t.borderInput} rounded-xl text-white text-xl font-bold text-center outline-none focus:border-brand transition-colors`}
+            />
+          ))}
         </div>
+
+        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+        <p className={`${t.textMuted} text-sm text-center`}>
+          Enter the 6-digit code we sent you.
+        </p>
+
+        <button
+          type="submit"
+          disabled={!filled || isSubmitting}
+          className={`w-full h-13 ${t.btnPrimary}`}
+        >
+          {isSubmitting ? "Verifying…" : "Verify OTP"}
+        </button>
+      </form>
+
+      <div className="mt-5 text-center">
+        <p className={`${t.textSecondary} text-sm`}>
+          Didn&apos;t receive the code?
+        </p>
+        <button
+          onClick={handleResend}
+          disabled={!canResend || isResending}
+          className={`mt-1 text-sm font-medium transition-colors ${
+            canResend
+              ? `${t.brandText} hover:text-brand-soft`
+              : `${t.textMuted} cursor-not-allowed`
+          }`}
+        >
+          {isResending
+            ? "Sending…"
+            : canResend
+              ? "Resend OTP"
+              : `Resend OTP (${countdown}s)`}
+        </button>
       </div>
 
       <Link
@@ -274,7 +256,7 @@ function VerifyOTPContent() {
       >
         ← Back to Login
       </Link>
-    </main>
+    </AuthShell>
   );
 }
 

@@ -52,7 +52,7 @@ export function StudioCard({ studio }: { studio: Studio }) {
       <StudioImage studio={studio} />
       <div className="p-5">
         <p className="text-sm text-stone-400 mb-2">{studio.location}</p>
-        <h3 className="text-xl font-semibold tracking-tight group-hover:text-orange-300 transition-colors">
+        <h3 className="text-xl font-semibold tracking-tight group-hover:text-brand-soft transition-colors">
           {studio.name}
         </h3>
         <p className="mt-3 text-sm leading-6 text-stone-400 line-clamp-2">
@@ -66,7 +66,7 @@ export function StudioCard({ studio }: { studio: Studio }) {
         )}
         <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between gap-3">
           <span className="font-semibold">{priceLabel(studio.price)}</span>
-          <span className="text-sm text-orange-300">
+          <span className="text-sm text-brand-soft">
             Explore <span aria-hidden="true">↗</span>
           </span>
         </div>

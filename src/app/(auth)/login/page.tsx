@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { studioReturnPath } from "@/lib/booking/return-path";
 import { GoogleLogin } from "@react-oauth/google";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { t } from "@/styles/tokens";
 import { sendOTP, googleAuth } from "@/lib/api/auth";
 import { useAuth } from "@/context/AuthContext";
@@ -77,101 +78,81 @@ function LoginContent() {
   }
 
   return (
-    <main
-      className={`min-h-screen ${t.page} flex flex-col items-center justify-center px-4`}
+    <AuthShell
+      title="A space is waiting for you"
+      description={
+        next
+          ? "Sign in to continue your booking. Your selected time will be checked again."
+          : "Sign in to book spaces and manage your sessions."
+      }
     >
-      {/* Logo */}
-      <div className="mb-8 text-center">
-        <h1
-          className={`text-5xl font-black tracking-widest ${t.brandText} uppercase`}
+      {/* Phone OTP form */}
+      <form onSubmit={handleSendOTP} className="flex flex-col gap-4">
+        <div
+          className={`flex items-center gap-2 ${t.input} border ${t.borderInput} rounded-xl px-4 h-12 focus-within:border-brand transition-colors`}
         >
-          OQupy
-        </h1>
-        <p className={`mt-2 ${t.textSecondary} text-base`}>
-          The floor is yours.
-        </p>
-      </div>
-
-      {/* Card */}
-      <div className={`w-full max-w-sm ${t.cardBox} p-8`}>
-        <h2
-          className={`text-xl font-semibold ${t.textPrimary} text-center mb-6`}
+          <span className={`${t.textSecondary} text-sm font-medium shrink-0`}>
+            +91
+          </span>
+          <div className="w-px h-5 bg-border-input" />
+          <input
+            aria-label="Phone number"
+            autoComplete="tel-national"
+            inputMode="numeric"
+            type="tel"
+            placeholder="Enter your phone number"
+            value={phone}
+            onChange={(e) =>
+              setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+            }
+            className={`min-w-0 flex-1 bg-transparent ${t.textPrimary} placeholder:text-text-muted text-sm outline-none`}
+          />
+        </div>
+        {otpError && (
+          <p className="text-red-400 text-sm text-center">{otpError}</p>
+        )}
+        <button
+          type="submit"
+          disabled={!isReady || isSending}
+          className={`w-full h-12 ${t.btnPrimary}`}
         >
-          A space is waiting for you
-        </h2>
+          {isSending ? "Sending…" : "Send OTP"}
+        </button>
+      </form>
 
-        <p className="text-center text-sm text-stone-400 mb-6">
-          {next
-            ? "Sign in to continue your booking. Your selected time will be checked again."
-            : "Sign in to book spaces and manage your sessions."}
-        </p>
-        {/* Phone OTP form */}
-        <form onSubmit={handleSendOTP} className="flex flex-col gap-4">
-          <div
-            className={`flex items-center gap-2 ${t.input} border ${t.borderInput} rounded-xl px-4 h-12 focus-within:border-brand transition-colors`}
-          >
-            <span className={`${t.textSecondary} text-sm font-medium shrink-0`}>
-              +91
-            </span>
-            <div className="w-px h-5 bg-border-input" />
-            <input
-              aria-label="Phone number"
-              autoComplete="tel-national"
-              inputMode="numeric"
-              type="tel"
-              placeholder="Enter your phone number"
-              value={phone}
-              onChange={(e) =>
-                setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+      {/* Divider + Google — hidden on Vercel preview (unregistered origin) */}
+      {showGoogle && (
+        <>
+          <div className="flex items-center gap-3 my-5">
+            <div className={t.dividerLine} />
+            <span className={`${t.textMuted} text-xs`}>OR</span>
+            <div className={t.dividerLine} />
+          </div>
+          {googleError && (
+            <p className="text-red-400 text-sm text-center mb-3">
+              {googleError}
+            </p>
+          )}
+          <div className="google-signin">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() =>
+                setGoogleError("Google sign-in was cancelled or failed.")
               }
-              className={`min-w-0 flex-1 bg-transparent ${t.textPrimary} placeholder:text-text-muted text-sm outline-none`}
+              // The GIS API supports outline_dark; this wrapper’s theme union predates it.
+              theme={"outline_dark" as "filled_black"}
+              shape="pill"
+              size="large"
+              text="continue_with"
+              width="280"
             />
           </div>
-          {otpError && (
-            <p className="text-red-400 text-sm text-center">{otpError}</p>
-          )}
-          <button
-            type="submit"
-            disabled={!isReady || isSending}
-            className={`w-full h-12 ${t.btnPrimary}`}
-          >
-            {isSending ? "Sending…" : "Send OTP"}
-          </button>
-        </form>
-
-        {/* Divider + Google — hidden on Vercel preview (unregistered origin) */}
-        {showGoogle && (
-          <>
-            <div className="flex items-center gap-3 my-5">
-              <div className={t.dividerLine} />
-              <span className={`${t.textMuted} text-xs`}>OR</span>
-              <div className={t.dividerLine} />
-            </div>
-            {googleError && (
-              <p className="text-red-400 text-sm text-center mb-3">
-                {googleError}
-              </p>
-            )}
-            <div className="flex justify-center min-w-0">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() =>
-                  setGoogleError("Google sign-in was cancelled or failed.")
-                }
-                theme="filled_black"
-                shape="rectangular"
-                size="large"
-                text="continue_with"
-                width="240"
-              />
-            </div>
-          </>
-        )}
-      </div>
+        </>
+      )}
       <Link href={next || "/studios"} className="back-link mt-6">
         ← {next ? "Back to your studio" : "Explore studios first"}
       </Link>
-    </main>
+    </AuthShell>
   );
 }
 

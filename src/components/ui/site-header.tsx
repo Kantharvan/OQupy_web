@@ -13,17 +13,14 @@ export function SiteHeader() {
         aria-label="Main navigation"
         className="flex items-center gap-5 text-sm"
       >
-        <Link
-          href="/studios"
-          className="hidden sm:inline hover:text-orange-300"
-        >
+        <Link href="/studios" className="header-explore">
           Explore studios
         </Link>
         <Link
           href={user ? "/dashboard" : "/login"}
           className="button-secondary"
         >
-          {user ? "My dashboard" : "Sign in"}
+          {user ? "My workspace" : "Sign in"}
           <span aria-hidden="true"> ↗</span>
         </Link>
       </nav>

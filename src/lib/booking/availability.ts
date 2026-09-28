@@ -45,3 +45,38 @@ export function timeOptions(
   }
   return result;
 }
+
+/** Values remain in the API's HH:mm format; labels are always 12-hour. */
+export function timeLabel(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+}
+export function validDuration(value: number) {
+  return (
+    Number.isFinite(value) &&
+    value >= 0.5 &&
+    value <= 24 &&
+    Number.isInteger(value * 2)
+  );
+}
+export function durationLabel(value: number) {
+  const hours = Math.floor(value);
+  const minutes = Math.round((value - hours) * 60);
+  return [
+    hours ? `${hours} ${hours === 1 ? "hour" : "hours"}` : "",
+    minutes ? `${minutes} min` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+export function formatSessionDate(value: string) {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: STUDIO_TIME_ZONE,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(value));
+}

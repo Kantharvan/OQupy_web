@@ -29,7 +29,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col bg-[#0a0a0a] text-white antialiased">
+      <body className="min-h-full flex flex-col bg-bg-page text-white antialiased">
         <GoogleProvider>
           <AuthProvider>{children}</AuthProvider>
         </GoogleProvider>

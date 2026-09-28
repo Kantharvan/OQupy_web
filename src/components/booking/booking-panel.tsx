@@ -10,7 +10,14 @@ import {
 } from "@/lib/api/studios";
 import { createBooking } from "@/lib/api/bookings";
 import { hourlyRate, money, priceLabel } from "@/lib/booking/price";
-import { slotISO, studioToday, timeOptions } from "@/lib/booking/availability";
+import {
+  slotISO,
+  studioToday,
+  timeOptions,
+  timeLabel,
+  validDuration,
+  durationLabel,
+} from "@/lib/booking/availability";
 
 export function BookingPanel({ studio }: { studio: Studio }) {
   const params = useSearchParams();
@@ -21,11 +28,12 @@ export function BookingPanel({ studio }: { studio: Studio }) {
       ? initialDate
       : "",
   );
-  const [duration, setDuration] = useState(
-    [1, 2, 4].includes(Number(params.get("duration")))
-      ? Number(params.get("duration"))
-      : 1,
-  );
+  const [durationInput, setDurationInput] = useState(() => {
+    const restored = Number(params.get("duration"));
+    return validDuration(restored) ? String(restored) : "1";
+  });
+  const duration = Number(durationInput);
+  const durationValid = validDuration(duration);
   const [time, setTime] = useState(params.get("time") || "");
   const [availability, setAvailability] = useState<AvailabilityResponse | null>(
     null,
@@ -66,11 +74,13 @@ export function BookingPanel({ studio }: { studio: Studio }) {
     };
   }, [studio.id, date, retry]);
   const options =
-    availability?.date === date && !error
+    availability?.date === date && !error && durationValid
       ? timeOptions(availability, duration)
       : [];
   const selectionValid =
-    !loading && options.some((s) => s.time === time && s.available);
+    durationValid &&
+    !loading &&
+    options.some((s) => s.time === time && s.available);
   const canBook =
     selectionValid &&
     rate !== null &&
@@ -160,26 +170,33 @@ export function BookingPanel({ studio }: { studio: Studio }) {
             }}
           />
         </label>
-        <fieldset>
-          <legend className="field-label">Session length</legend>
-          <div className="grid grid-cols-3 gap-2">
-            {[1, 2, 4].map((d) => (
-              <button
-                key={d}
-                type="button"
-                className={`choice ${duration === d ? "choice-selected" : ""}`}
-                aria-pressed={duration === d}
-                onClick={() => {
-                  setDuration(d);
-                  setTime("");
-                }}
-              >
-                {d} {d === 1 ? "hour" : "hours"}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        {date && (
+        <label className="form-field">
+          Session length (hours)
+          <input
+            type="number"
+            min="0.5"
+            max="24"
+            step="0.5"
+            required
+            value={durationInput}
+            aria-describedby="duration-help"
+            aria-invalid={!durationValid}
+            onChange={(e) => {
+              setDurationInput(e.target.value);
+              setTime("");
+            }}
+          />
+          <span id="duration-help" className="text-xs text-text-secondary">
+            Choose 30 minutes to 24 hours, in half-hour steps. For example, 1.5
+            is 1 hour 30 min.
+          </span>
+        </label>
+        {!durationValid && (
+          <p role="alert" className="text-sm text-red-300">
+            Enter a length from 0.5 to 24 hours, in 0.5-hour steps.
+          </p>
+        )}
+        {date && durationValid && (
           <fieldset>
             <legend className="field-label">Start time</legend>
             {loading ? (
@@ -193,7 +210,7 @@ export function BookingPanel({ studio }: { studio: Studio }) {
                 </p>
                 <button
                   type="button"
-                  className="text-orange-300 underline mt-2"
+                  className="text-brand-soft underline mt-2"
                   onClick={() => {
                     setLoading(true);
                     setRetry((n) => n + 1);
@@ -208,14 +225,14 @@ export function BookingPanel({ studio }: { studio: Studio }) {
                   {options.map((slot) => (
                     <button
                       type="button"
-                      key={slot.time}
+                      key={timeLabel(slot.time)}
                       disabled={!slot.available}
-                      aria-label={`${slot.time}${slot.reason ? ` — ${slot.reason}` : ""}`}
+                      aria-label={`${timeLabel(slot.time)}${slot.reason ? ` — ${slot.reason}` : ""}`}
                       aria-pressed={time === slot.time}
                       className={`choice ${time === slot.time ? "choice-selected" : ""}`}
                       onClick={() => setTime(slot.time)}
                     >
-                      {slot.time}
+                      {timeLabel(slot.time)}
                     </button>
                   ))}
                 </div>
@@ -241,7 +258,7 @@ export function BookingPanel({ studio }: { studio: Studio }) {
         {selectionValid && rate !== null && (
           <div className="booking-total">
             <span>
-              {duration}h × {money(rate)}
+              {durationLabel(duration)} × {money(rate)}
             </span>
             <strong>{money(Math.round(rate * duration * 100) / 100)}</strong>
           </div>

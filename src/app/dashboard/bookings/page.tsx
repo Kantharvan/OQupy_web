@@ -1,6 +1,6 @@
 "use client";
-
-import { useEffect, useState, useCallback, useTransition, Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getOwnerStudios, type Studio } from "@/lib/api/studios";
@@ -10,246 +10,222 @@ import {
   confirmBooking,
   cancelBooking,
   type Booking,
-  type BookingStatus,
 } from "@/lib/api/bookings";
-import { t } from "@/styles/tokens";
-
-const STATUS_LABELS: Record<BookingStatus, string> = {
-  AwaitingApproval: "Pending",
-  Confirmed: "Approved",
-  Cancelled: "Cancelled",
-  Completed: "Completed",
-};
-
-const STATUS_COLORS: Record<BookingStatus, string> = {
-  AwaitingApproval: "bg-yellow-500/15 text-yellow-400",
-  Confirmed: "bg-green-500/15 text-green-400",
-  Cancelled: "bg-red-500/15 text-red-400",
-  Completed: "bg-blue-500/15 text-blue-400",
-};
-
-// ── Owner view ────────────────────────────────────────────────────────────────
-
-function OwnerBookingsContent() {
-  const searchParams = useSearchParams();
-  const preselectedStudioId = searchParams.get("studioId");
+import { PageHeading } from "@/components/ui/page-heading";
+import { BookingCard } from "@/components/dashboard/booking-card";
+function BookingsContent() {
   const { user } = useAuth();
-
+  const initial = useSearchParams().get("studioId");
+  const owner = user?.role === "studio_owner";
   const [studios, setStudios] = useState<Studio[]>([]);
-  const [selectedStudioId, setSelectedStudioId] = useState<string>("");
+  const [selected, setSelected] = useState(initial || "");
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoadingStudios, setIsLoadingStudios] = useState(true);
-  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
-  const [actionId, setActionId] = useState<string | null>(null);
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionId, setActionId] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
-    if (!user) return;
+    if (!user || !owner) return;
+    let active = true;
     getOwnerStudios(user.id)
-      .then((res) => {
-        setStudios(res.data);
-        const initial = preselectedStudioId ?? res.data[0]?.id ?? "";
-        setSelectedStudioId(initial);
+      .then((r) => {
+        if (active) {
+          setStudios(r.data);
+          setSelected(
+            r.data.some((s) => s.id === initial)
+              ? initial!
+              : r.data[0]?.id || "",
+          );
+          if (!r.data.length) setLoading(false);
+        }
       })
-      .finally(() => setIsLoadingStudios(false));
-  }, [user, preselectedStudioId]);
-
-  const loadBookings = useCallback(async () => {
-    if (!selectedStudioId) return;
-    setIsLoadingBookings(true);
-    try {
-      const res = await getBookingsByStudio(selectedStudioId, 1, 50);
-      setBookings(res.data.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()));
-    } finally {
-      setIsLoadingBookings(false);
-    }
-  }, [selectedStudioId]);
-
-  const [, startTransition] = useTransition();
-  useEffect(() => { startTransition(() => { loadBookings(); }); }, [loadBookings]);
-
-  async function handleConfirm(id: string) {
-    setActionId(id);
-    try {
-      const updated = await confirmBooking(id);
-      setBookings((prev) => prev.map((b) => b.id === id ? updated : b));
-    } finally {
-      setActionId(null);
-    }
-  }
-
-  async function handleCancel(id: string) {
-    setActionId(id);
-    try {
-      const updated = await cancelBooking(id);
-      setBookings((prev) => prev.map((b) => b.id === id ? updated : b));
-    } finally {
-      setActionId(null);
-    }
-  }
-
-  return (
-    <div>
-      <div className="mb-6">
-        <h2 className={`text-xl font-bold ${t.textPrimary}`}>Bookings</h2>
-        <p className={`text-sm ${t.textMuted} mt-0.5`}>Review and manage booking requests.</p>
-      </div>
-
-      {!isLoadingStudios && studios.length > 0 && (
-        <div className="flex gap-2 flex-wrap mb-6">
-          {studios.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setSelectedStudioId(s.id)}
-              className={`px-4 h-9 rounded-xl text-sm font-medium border transition-colors ${
-                selectedStudioId === s.id
-                  ? "bg-brand-btn text-white border-transparent"
-                  : `${t.borderInput} ${t.textSecondary} hover:border-zinc-500`
-              }`}
-            >
-              {s.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {isLoadingBookings ? (
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className={`${t.cardBox} h-20 animate-pulse`} />
-          ))}
-        </div>
-      ) : bookings.length === 0 ? (
-        <div className={`${t.cardBox} p-10 text-center`}>
-          <p className="text-4xl mb-3">📅</p>
-          <p className={`${t.textPrimary} font-semibold`}>No bookings yet</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {bookings.map((b) => (
-            <div key={b.id} className={`${t.cardBox} p-4 flex items-center gap-4`}>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className={`font-semibold text-sm ${t.textPrimary} truncate`}>{b.eventName}</p>
-                  <span className={`shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-full ${STATUS_COLORS[b.status]}`}>
-                    {STATUS_LABELS[b.status]}
-                  </span>
-                </div>
-                <p className={`text-xs ${t.textMuted}`}>
-                  {new Date(b.dateTime).toLocaleString()} · {b.durationHours}h
-                  {b.clientName && ` · ${b.clientName}`}
-                </p>
-                {b.paymentAmount && (
-                  <p className={`text-xs ${t.brandText} mt-0.5`}>₹{b.paymentAmount}</p>
-                )}
-              </div>
-
-              {b.status === "AwaitingApproval" && (
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    onClick={() => handleConfirm(b.id)}
-                    disabled={actionId === b.id}
-                    className="h-8 px-3 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleCancel(b.id)}
-                    disabled={actionId === b.id}
-                    className="h-8 px-3 rounded-lg bg-red-600/30 hover:bg-red-600/50 text-red-400 text-xs font-medium transition-colors disabled:opacity-50"
-                  >
-                    Decline
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Student / Instructor view ─────────────────────────────────────────────────
-
-function MyBookingsContent() {
-  const { user } = useAuth();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
+      .catch(() => {
+        if (active) {
+          setError("We couldn’t load your studios.");
+          setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [user, owner, initial, retry]);
   useEffect(() => {
-    if (!user) return;
-    getUserBookings(user.id)
-      .then((res) => {
-        setBookings(res.data.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()));
+    if (!user || (owner && !selected)) return;
+    let active = true;
+    const request = owner
+      ? getBookingsByStudio(selected, 1, 50)
+      : getUserBookings(user.id);
+    request
+      .then((r) => {
+        if (active) {
+          setBookings(
+            r.data.sort(
+              (a, b) => Date.parse(b.dateTime) - Date.parse(a.dateTime),
+            ),
+          );
+          setError("");
+        }
       })
-      .finally(() => setIsLoading(false));
-  }, [user]);
-
+      .catch(() => {
+        if (active)
+          setError("We couldn’t load your bookings. Please try again.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user, owner, selected, retry]);
+  async function decide(id: string, approve: boolean) {
+    setActionId(id);
+    setError("");
+    try {
+      const updated = await (approve ? confirmBooking(id) : cancelBooking(id));
+      setBookings((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, ...updated } : b)),
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not update this request. Try again.",
+      );
+    } finally {
+      setActionId("");
+    }
+  }
+  const visible = bookings.filter(
+    (b) => filter === "all" || b.status === filter,
+  );
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className={`text-xl font-bold ${t.textPrimary}`}>My Bookings</h2>
-        <p className={`text-sm ${t.textMuted} mt-0.5`}>All your studio bookings and their status.</p>
+    <>
+      <PageHeading
+        eyebrow="YOUR SESSIONS"
+        title={owner ? "Booking requests" : "My bookings"}
+        description={
+          owner
+            ? "Review requests and make room for your next guests."
+            : "Every plan, from your first request to your next session."
+        }
+        action={
+          !owner && (
+            <Link href="/studios" className="button-primary">
+              Book another space ↗
+            </Link>
+          )
+        }
+      />
+      {owner && studios.length > 0 && (
+        <label className="form-field studio-filter">
+          Studio
+          <select
+            value={selected}
+            onChange={(e) => {
+              setSelected(e.target.value);
+              setLoading(true);
+              setBookings([]);
+            }}
+          >
+            {studios.map((s) => (
+              <option value={s.id} key={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <div className="filter-bar" aria-label="Booking filters">
+        {[
+          ["all", "All sessions"],
+          ["AwaitingApproval", "Awaiting approval"],
+          ["Confirmed", "Confirmed"],
+          ["Cancelled", "Cancelled"],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            className="filter-pill"
+            aria-pressed={filter === value}
+            onClick={() => setFilter(value)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
-
-      {isLoading ? (
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className={`${t.cardBox} h-20 animate-pulse`} />
-          ))}
-        </div>
-      ) : bookings.length === 0 ? (
-        <div className={`${t.cardBox} p-10 text-center`}>
-          <p className="text-4xl mb-3">📅</p>
-          <p className={`${t.textPrimary} font-semibold`}>No bookings yet</p>
-          <p className={`text-sm ${t.textMuted} mt-1`}>Browse studios to make your first booking.</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {bookings.map((b) => (
-            <div key={b.id} className={`${t.cardBox} p-4`}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <p className={`font-semibold text-sm ${t.textPrimary}`}>{b.eventName}</p>
-                    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${STATUS_COLORS[b.status]}`}>
-                      {STATUS_LABELS[b.status]}
-                    </span>
-                  </div>
-                  <p className={`text-sm font-medium ${t.textSecondary}`}>{b.studioName}</p>
-                  <p className={`text-xs ${t.textMuted} mt-0.5`}>
-                    {new Date(b.dateTime).toLocaleDateString("en-IN", {
-                      weekday: "short", day: "numeric", month: "short", year: "numeric",
-                    })}
-                    {" · "}
-                    {new Date(b.dateTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                    {" · "}{b.durationHours}h
-                  </p>
-                  {b.paymentAmount && (
-                    <p className={`text-xs ${t.brandText} mt-1`}>₹{b.paymentAmount}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+      {error && (
+        <div role="alert" className="notice notice-error">
+          {error}
+          <button
+            className="text-brand underline ml-3"
+            onClick={() => {
+              setLoading(true);
+              setRetry((n) => n + 1);
+            }}
+          >
+            Retry
+          </button>
         </div>
       )}
-    </div>
+      {loading ? (
+        <div role="status" className="empty-state">
+          Loading your sessions…
+        </div>
+      ) : visible.length ? (
+        <div className="session-list">
+          {visible.map((b) => (
+            <BookingCard
+              key={b.id}
+              booking={b}
+              actions={
+                owner && b.status === "AwaitingApproval" ? (
+                  <div className="action-row">
+                    <button
+                      className="button-primary"
+                      disabled={!!actionId}
+                      onClick={() => decide(b.id, true)}
+                    >
+                      {actionId === b.id ? "Updating…" : "Approve"}
+                    </button>
+                    <button
+                      className="button-danger"
+                      disabled={!!actionId}
+                      onClick={() => decide(b.id, false)}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                ) : undefined
+              }
+            />
+          ))}
+        </div>
+      ) : (
+        !error && (
+          <div className="empty-state">
+            <p className="eyebrow">ROOM FOR NEW PLANS</p>
+            <h3>No sessions here yet.</h3>
+            <p>
+              {owner
+                ? "New booking requests will appear here."
+                : "Explore a space you love and choose a time that works for you."}
+            </p>
+            <Link
+              href={owner ? "/dashboard/studios" : "/studios"}
+              className="button-secondary"
+            >
+              {owner ? "Manage studios" : "Explore studios"}
+            </Link>
+          </div>
+        )
+      )}
+    </>
   );
 }
-
-// ── Router ────────────────────────────────────────────────────────────────────
-
-function BookingsRouter() {
-  const { user } = useAuth();
-  if (user?.role === "studio_owner") return <OwnerBookingsContent />;
-  return <MyBookingsContent />;
-}
-
 export default function DashboardBookingsPage() {
   return (
     <Suspense>
-      <BookingsRouter />
+      <BookingsContent />
     </Suspense>
   );
 }

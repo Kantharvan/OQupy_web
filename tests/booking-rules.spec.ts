@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { hourlyRate, priceLabel } from "../src/lib/booking/price";
-import { timeOptions, slotISO } from "../src/lib/booking/availability";
+import {
+  timeOptions,
+  slotISO,
+  timeLabel,
+  validDuration,
+} from "../src/lib/booking/availability";
 import { studioReturnPath } from "../src/lib/booking/return-path";
 
 test("legacy and numeric prices produce the same charge; malformed prices cannot become free bookings", () => {
@@ -55,4 +60,33 @@ test("sign-in return destinations stay inside studio pages", () => {
   expect(studioReturnPath("/studios/Room?date=2030-10-10&time=09%3A00")).toBe(
     "/studios/Room?date=2030-10-10&time=09%3A00",
   );
+});
+
+test("AM/PM labels preserve noon and midnight, and custom durations fit full sessions", () => {
+  expect(timeLabel("00:00")).toBe("12:00 AM");
+  expect(timeLabel("12:00")).toBe("12:00 PM");
+  expect(timeLabel("13:30")).toBe("1:30 PM");
+  for (const length of [0.5, 1.5, 3, 3.5, 8, 24])
+    expect(validDuration(length)).toBe(true);
+  for (const length of [0, -1, 0.25, 1.1, 24.5, NaN, Infinity])
+    expect(validDuration(length)).toBe(false);
+  const slots = timeOptions(
+    {
+      date: "2030-10-10",
+      operationalHours: { open: "09:00", close: "13:00" },
+      busy: [
+        {
+          start: slotISO("2030-10-10", "11:00"),
+          end: slotISO("2030-10-10", "12:00"),
+          kind: "booking",
+        },
+      ],
+    },
+    1.5,
+    0,
+  );
+  expect(slots.filter((s) => s.available).map((s) => s.time)).toEqual([
+    "09:00",
+    "09:30",
+  ]);
 });

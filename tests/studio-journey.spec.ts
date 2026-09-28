@@ -70,6 +70,16 @@ async function mockAPI(
       };
     else if (path === "/users/user-1")
       body = { ...user, ...route.request().postDataJSON() };
+    else if (path.startsWith("/bookings/user/"))
+      body = {
+        data: bookings.map((b) => ({
+          ...b,
+          id: "booking-1",
+          status: "AwaitingApproval",
+          studioName: studio.name,
+        })),
+        total: bookings.length,
+      };
     else if (path.startsWith("/bookings/studio/"))
       body = { data: [], total: 0 };
     else if (path === "/bookings" && route.request().method() === "POST") {
@@ -94,7 +104,7 @@ async function mockAPI(
 
 async function chooseSlot(page: Page) {
   await page.getByLabel("Date", { exact: true }).fill(date);
-  await page.getByRole("button", { name: "09:00", exact: true }).click();
+  await page.getByRole("button", { name: "9:00 AM", exact: true }).click();
 }
 
 test("browse, search, recover from empty results and keep filters on back navigation", async ({
@@ -136,7 +146,7 @@ test("guest sees availability and retains date, time and price through OTP login
   await chooseSlot(page);
   await expect(page.getByText("Meet the instructors")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "12:30 — Closes before session ends" }),
+    page.getByRole("button", { name: "12:30 PM — Closes before session ends" }),
   ).toBeDisabled();
   await page.getByRole("link", { name: "Sign in to request booking" }).click();
   await page.getByLabel("Phone number").fill("9999900000");
@@ -146,7 +156,7 @@ test("guest sees availability and retains date, time and price through OTP login
   await page.getByRole("button", { name: "Verify OTP", exact: true }).click();
   await expect(page.getByLabel("Date", { exact: true })).toHaveValue(date);
   await expect(
-    page.getByRole("button", { name: "09:00", exact: true }),
+    page.getByRole("button", { name: "9:00 AM", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("What’s your session for?").fill("Rehearsal");
   await page
@@ -182,9 +192,7 @@ test("new users return to their booking after completing their profile", async (
   await page.getByLabel("Display name").fill("New dancer");
   await page.getByRole("button", { name: "Get started" }).click();
   await expect(page.getByLabel("Date", { exact: true })).toHaveValue(date);
-  await expect(
-    page.getByRole("button", { name: "2 hours", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Session length (hours)")).toHaveValue("2");
 });
 
 test("conflicting booking refreshes availability and requires a new selection", async ({
@@ -225,7 +233,7 @@ test("failed availability never leaves an old date bookable, and retry recovers"
   await page.unroute("**/studios/studio-1/availability?date=2030-10-11");
   await page.getByRole("button", { name: "Retry availability" }).click();
   await expect(
-    page.getByRole("button", { name: "09:00", exact: true }),
+    page.getByRole("button", { name: "9:00 AM", exact: true }),
   ).toBeEnabled();
   expect(api.bookings).toHaveLength(0);
 });
@@ -242,6 +250,11 @@ test("narrow layouts keep all content within the viewport", async ({
   ]) {
     await page.goto(url);
     await expect(page.locator("main")).toBeVisible();
+    if (url === "/login" || url.startsWith("/verify-otp"))
+      await page.screenshot({
+        path: testInfo.outputPath(url === "/login" ? "login.png" : "otp.png"),
+        fullPage: true,
+      });
     if (url === "/studios" || url === studioURL) {
       await expect(
         page.getByRole("heading", { name: studio.name, exact: true }),
@@ -314,7 +327,7 @@ test("late availability responses cannot overwrite the newly selected date", asy
   await expect.poll(() => firstRequested).toBe(true);
   await page.getByLabel("Date", { exact: true }).fill("2030-10-11");
   await expect(
-    page.getByRole("button", { name: "11:00", exact: true }),
+    page.getByRole("button", { name: "11:00 AM", exact: true }),
   ).toBeEnabled();
   const oldResponse = page.waitForResponse((response) =>
     response.url().endsWith(`availability?date=${date}`),
@@ -322,9 +335,104 @@ test("late availability responses cannot overwrite the newly selected date", asy
   release();
   await oldResponse;
   await expect(
-    page.getByRole("button", { name: "11:00", exact: true }),
+    page.getByRole("button", { name: "11:00 AM", exact: true }),
   ).toBeEnabled();
   await expect(page.getByLabel("Date", { exact: true })).toHaveValue(
     "2030-10-11",
   );
+});
+
+test("a custom fractional session survives sign-in, charges correctly and opens the new workspace", async ({
+  page,
+}) => {
+  const api = await mockAPI(page);
+  await page.goto(studioURL);
+  await page.getByLabel("Date", { exact: true }).fill(date);
+  await page.getByLabel("Session length (hours)").fill("1.5");
+  await page.getByRole("button", { name: "9:00 AM", exact: true }).click();
+  await expect(page.getByText("₹900.00", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Sign in to request booking" }).click();
+  await page.getByLabel("Phone number").fill("9999900000");
+  await page.getByRole("button", { name: "Send OTP", exact: true }).click();
+  for (let i = 1; i <= 6; i++)
+    await page.getByLabel(`Code digit ${i}`).fill("1");
+  await page.getByRole("button", { name: "Verify OTP", exact: true }).click();
+  await expect(page.getByLabel("Session length (hours)")).toHaveValue("1.5");
+  await page.getByLabel("What’s your session for?").fill("Long rehearsal");
+  await page.getByRole("button", { name: "Request booking" }).click();
+  await page.getByRole("link", { name: "View my bookings" }).click();
+  await expect(
+    page.getByRole("navigation", { name: "Workspace navigation" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Long rehearsal" }),
+  ).toBeVisible();
+  await expect(page.getByText(/1 hour 30 min/)).toBeVisible();
+  expect(api.bookings[0]).toMatchObject({
+    durationHours: 1.5,
+    paymentAmount: 900,
+    dateTime: "2030-10-10T03:30:00.000Z",
+  });
+  expect(api.unexpected).toEqual([]);
+});
+
+test("changing length invalidates the old slot and invalid lengths cannot submit", async ({
+  page,
+}) => {
+  const api = await mockAPI(page, { authenticated: true });
+  await page.goto(studioURL);
+  await chooseSlot(page);
+  await page.getByLabel("Session length (hours)").fill("3.5");
+  await expect(
+    page.getByRole("button", { name: "Request booking" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "10:00 AM — Closes before session ends" }),
+  ).toBeDisabled();
+  await page.getByLabel("Session length (hours)").fill("1.1");
+  await expect(
+    page.getByText("Enter a length from", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Request booking" }),
+  ).toBeDisabled();
+  expect(api.bookings).toHaveLength(0);
+});
+
+test("Google uses the supported dark theme, preserves ID-token sign-in and booking intent", async ({
+  page,
+}) => {
+  await mockAPI(page);
+  await page.route("https://accounts.google.com/gsi/client", (route) =>
+    route.fulfill({
+      contentType: "text/javascript",
+      body: `window.google={accounts:{id:{initialize(options){window.gsiOptions=options},renderButton(parent,options){const button=document.createElement('button');button.textContent='Continue with Google';button.dataset.theme=options.theme;button.onclick=()=>window.gsiOptions.callback({credential:'test-id-token'});parent.appendChild(button)},cancel(){}}}};`,
+    }),
+  );
+  await page.route("**/auth/google", async (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      idToken: "test-id-token",
+    });
+    await route.fulfill({
+      json: {
+        user,
+        accessToken: "test-access",
+        refreshToken: "test-refresh",
+        isNewUser: false,
+      },
+    });
+  });
+  const next = `${studioURL}?date=${date}&time=09%3A00&duration=1.5`;
+  await page.goto(`/login?next=${encodeURIComponent(next)}`);
+  const google = page.getByRole("button", { name: "Continue with Google" });
+  await expect(google).toHaveAttribute("data-theme", "outline_dark");
+  await expect(page.locator(".google-signin")).toHaveCSS(
+    "color-scheme",
+    "light",
+  );
+  await google.click();
+  await expect(page.getByLabel("Session length (hours)")).toHaveValue("1.5");
+  await expect(
+    page.getByRole("button", { name: "9:00 AM", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
 });
