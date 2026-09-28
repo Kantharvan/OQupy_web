@@ -1,70 +1,120 @@
 "use client";
-
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { t } from "@/styles/tokens";
 import { useAuth } from "@/context/AuthContext";
-
-const NAV = [
-  { href: "/dashboard", label: "Overview", exact: true },
-  { href: "/dashboard/studios", label: "My Studios", exact: false },
-  { href: "/dashboard/bookings", label: "Bookings", exact: false },
-  { href: "/dashboard/profile", label: "Profile", exact: false },
+import { SiteHeader } from "@/components/ui/site-header";
+const common = [
+  { href: "/dashboard", label: "Overview", icon: "◫" },
+  { href: "/dashboard/bookings", label: "Bookings", icon: "▤" },
+  { href: "/dashboard/profile", label: "Profile", icon: "◎" },
 ];
-
-const ADMIN_NAV = { href: "/dashboard/admin", label: "Admin", exact: false };
-
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, setUser } = useAuth();
-
-  function handleLogout() {
-    setUser(null);
-    router.push("/login");
+  const { user, isLoading, logout } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+  useEffect(() => {
+    if (signingOut) return;
+    if (!isLoading && !user) router.replace("/login");
+    else if (!isLoading && user && !user.role) router.replace("/onboarding");
+  }, [isLoading, user, router, signingOut]);
+  const ownerOnly =
+    pathname.startsWith("/dashboard/studios") ||
+    pathname.startsWith("/dashboard/blockouts");
+  const allowed =
+    (!ownerOnly || user?.role === "studio_owner") &&
+    (!pathname.startsWith("/dashboard/admin") || user?.role === "admin");
+  const links = [
+    ...common.slice(0, 1),
+    ...(user?.role === "studio_owner"
+      ? [
+          { href: "/dashboard/studios", label: "My studios", icon: "⌂" },
+          { href: "/dashboard/blockouts", label: "Availability", icon: "◷" },
+        ]
+      : []),
+    ...common.slice(1),
+    ...(user?.role === "admin"
+      ? [{ href: "/dashboard/admin", label: "Admin", icon: "⚙" }]
+      : []),
+  ];
+  async function signOut() {
+    setSigningOut(true);
+    await logout();
+    router.replace("/studios");
   }
-
   return (
-    <div className={`min-h-screen ${t.page} flex flex-col`}>
-      {/* Top navbar */}
-      <header className={`shrink-0 border-b border-border bg-bg-card px-6 flex items-center gap-6 h-14`}>
-        <span className={`text-lg font-black tracking-widest ${t.brandText} uppercase mr-2`}>OQupy</span>
-
-        <nav className="flex items-center gap-1 flex-1">
-          {[...NAV, ...(user?.role === "admin" ? [ADMIN_NAV] : [])].map((item) => {
-            const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  active
-                    ? `bg-bg-input ${t.textPrimary}`
-                    : `${t.textSecondary} hover:bg-bg-input hover:text-white`
-                }`}
-              >
-                {item.label}
+    <>
+      <SiteHeader />
+      {isLoading || !user?.role ? (
+        <main className="page-wrap empty-state" role="status">
+          Opening your workspace…
+        </main>
+      ) : (
+        <div className="workspace">
+          <aside className="workspace-sidebar">
+            <div className="workspace-identity">
+              <span className="avatar">
+                {(user.name || "O").slice(0, 1).toUpperCase()}
+              </span>
+              <div>
+                <strong>{user.name || "Your account"}</strong>
+                <p>{user.role.replace("_", " ")}</p>
+              </div>
+            </div>
+            <p className="eyebrow sidebar-caption">YOUR WORKSPACE</p>
+            <nav aria-label="Workspace navigation">
+              {links.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={
+                    (
+                      item.href === "/dashboard"
+                        ? pathname === item.href
+                        : pathname.startsWith(item.href)
+                    )
+                      ? "page"
+                      : undefined
+                  }
+                >
+                  <span aria-hidden="true">{item.icon}</span>
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="workspace-help">
+              <p>Find your next space.</p>
+              <Link href="/studios" className="text-brand">
+                Explore studios ↗
               </Link>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <span className={`text-xs ${t.textMuted} hidden sm:block`}>{user?.name ?? user?.email}</span>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className={`text-xs ${t.textSecondary} hover:text-white transition-colors`}
-          >
-            Sign out →
-          </button>
+            </div>
+            <button
+              className="signout-button"
+              onClick={signOut}
+              disabled={signingOut}
+            >
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
+          </aside>
+          <main className="workspace-main" id="workspace-content">
+            {allowed ? (
+              children
+            ) : (
+              <section className="empty-state">
+                <h1>This page isn’t available for your role</h1>
+                <Link href="/dashboard" className="button-primary">
+                  Back to overview
+                </Link>
+              </section>
+            )}
+          </main>
         </div>
-      </header>
-
-      {/* Main */}
-      <main className="flex-1 overflow-y-auto px-8 py-8">
-        {children}
-      </main>
-    </div>
+      )}
+    </>
   );
 }

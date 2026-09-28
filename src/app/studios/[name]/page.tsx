@@ -68,7 +68,7 @@ function StudioDetail() {
                   <ul className="amenities-grid">
                     {studio.amenities.map((a) => (
                       <li key={a}>
-                        <span aria-hidden="true" className="text-orange-300">
+                        <span aria-hidden="true" className="text-brand-soft">
                           ✓
                         </span>{" "}
                         {a}

@@ -2,11 +2,25 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getPendingStudios, approveStudio, getUsers, setUserRole, type PendingStudio, type AdminUser } from "@/lib/api/admin";
+import {
+  getPendingStudios,
+  approveStudio,
+  getUsers,
+  setUserRole,
+  type PendingStudio,
+  type AdminUser,
+} from "@/lib/api/admin";
 import { type User } from "@/lib/api/auth";
+import { PageHeading } from "@/components/ui/page-heading";
+import { priceLabel } from "@/lib/booking/price";
 import { t } from "@/styles/tokens";
 
-const ROLE_OPTIONS: NonNullable<User["role"]>[] = ["student", "instructor", "studio_owner", "admin"];
+const ROLE_OPTIONS: NonNullable<User["role"]>[] = [
+  "student",
+  "instructor",
+  "studio_owner",
+  "admin",
+];
 
 export default function DashboardAdminPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -18,29 +32,34 @@ export default function DashboardAdminPage() {
     return (
       <div className={`${t.cardBox} p-10 text-center`}>
         <p className={`${t.textPrimary} font-semibold`}>Not authorized</p>
-        <p className={`text-sm ${t.textMuted} mt-1`}>This page is for admins only.</p>
+        <p className={`text-sm ${t.textMuted} mt-1`}>
+          This page is for admins only.
+        </p>
       </div>
     );
   }
 
   return (
     <div>
-      <div className="flex gap-2 mb-6">
+      <PageHeading
+        eyebrow="PLATFORM CARE"
+        title="Keep the community moving."
+        description="Review new spaces and manage who can do what across Oqupy."
+      />
+      <div className="filter-bar">
         <button
           type="button"
           onClick={() => setTab("studios")}
-          className={`h-9 px-4 rounded-lg text-sm font-medium transition-colors ${
-            tab === "studios" ? `bg-bg-input ${t.textPrimary}` : `${t.textSecondary} hover:bg-bg-input`
-          }`}
+          className="filter-pill"
+          aria-pressed={tab === "studios"}
         >
           Pending Studios
         </button>
         <button
           type="button"
           onClick={() => setTab("users")}
-          className={`h-9 px-4 rounded-lg text-sm font-medium transition-colors ${
-            tab === "users" ? `bg-bg-input ${t.textPrimary}` : `${t.textSecondary} hover:bg-bg-input`
-          }`}
+          className="filter-pill"
+          aria-pressed={tab === "users"}
         >
           Users
         </button>
@@ -64,9 +83,14 @@ function PendingStudiosPanel() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  async function handleDecision(id: string, approvalStatus: "approved" | "rejected") {
+  async function handleDecision(
+    id: string,
+    approvalStatus: "approved" | "rejected",
+  ) {
     setActionId(id);
     try {
       await approveStudio(id, approvalStatus);
@@ -81,8 +105,12 @@ function PendingStudiosPanel() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className={`text-xl font-bold ${t.textPrimary}`}>Pending Studios</h2>
-        <p className={`text-sm ${t.textMuted} mt-0.5`}>Review and approve or reject studio listings.</p>
+        <h2 className={`text-xl font-bold ${t.textPrimary}`}>
+          Pending Studios
+        </h2>
+        <p className={`text-sm ${t.textMuted} mt-0.5`}>
+          Review and approve or reject studio listings.
+        </p>
       </div>
 
       {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
@@ -101,26 +129,35 @@ function PendingStudiosPanel() {
       ) : (
         <div className="flex flex-col gap-3">
           {studios.map((s) => (
-            <div key={s.id} className={`${t.cardBox} p-4`}>
-              <div className="flex items-start justify-between gap-4">
+            <div key={s.id} className="surface-card review-card">
+              <div className="review-row">
                 <div className="min-w-0">
                   <p className={`font-semibold ${t.textPrimary}`}>{s.name}</p>
-                  <p className={`text-xs ${t.textMuted} mt-0.5`}>📍 {s.location} · {s.type.join(", ")} · ₹{s.price}/hr</p>
-                  <p className={`text-xs ${t.textMuted} mt-1`}>Owner: {s.owner.name} ({s.owner.email})</p>
-                  {s.description && <p className={`text-xs ${t.textSecondary} mt-2`}>{s.description}</p>}
+                  <p className={`text-xs ${t.textMuted} mt-0.5`}>
+                    📍 {s.location} · {s.type.join(", ")} ·{" "}
+                    {priceLabel(s.price)}
+                  </p>
+                  <p className={`text-xs ${t.textMuted} mt-1`}>
+                    Owner: {s.owner.name} ({s.owner.email})
+                  </p>
+                  {s.description && (
+                    <p className={`text-xs ${t.textSecondary} mt-2`}>
+                      {s.description}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button
                     onClick={() => handleDecision(s.id, "approved")}
                     disabled={actionId === s.id}
-                    className="h-8 px-3 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors disabled:opacity-50"
+                    className="button-primary"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => handleDecision(s.id, "rejected")}
                     disabled={actionId === s.id}
-                    className="h-8 px-3 rounded-lg bg-red-600/30 hover:bg-red-600/50 text-red-400 text-xs font-medium transition-colors disabled:opacity-50"
+                    className="button-danger"
                   >
                     Reject
                   </button>
@@ -148,13 +185,18 @@ function UsersPanel() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return users;
     return users.filter(
-      (u) => u.email?.toLowerCase().includes(q) || u.name?.toLowerCase().includes(q) || u.phone?.includes(q)
+      (u) =>
+        u.email?.toLowerCase().includes(q) ||
+        u.name?.toLowerCase().includes(q) ||
+        u.phone?.includes(q),
     );
   }, [users, search]);
 
@@ -175,11 +217,14 @@ function UsersPanel() {
     <div>
       <div className="mb-6">
         <h2 className={`text-xl font-bold ${t.textPrimary}`}>Users</h2>
-        <p className={`text-sm ${t.textMuted} mt-0.5`}>Find a user by email, name, or phone and set their role.</p>
+        <p className={`text-sm ${t.textMuted} mt-0.5`}>
+          Find a user by email, name, or phone and set their role.
+        </p>
       </div>
 
       <input
         type="text"
+        aria-label="Search users"
         placeholder="Search by email, name, or phone…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -191,7 +236,10 @@ function UsersPanel() {
       {isLoading ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-14 bg-bg-input rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="h-14 bg-bg-input rounded-xl animate-pulse"
+            />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -199,20 +247,36 @@ function UsersPanel() {
       ) : (
         <div className="flex flex-col gap-2">
           {filtered.map((u) => (
-            <div key={u.id} className={`${t.cardBox} p-3 flex items-center gap-4`}>
+            <div key={u.id} className="surface-card user-row">
               <div className="min-w-0 flex-1">
-                <p className={`text-sm font-medium ${t.textPrimary} truncate`}>{u.name || "(no name)"}</p>
-                <p className={`text-xs ${t.textMuted} truncate`}>{u.email ?? u.phone}</p>
+                <p className={`text-sm font-medium ${t.textPrimary} truncate`}>
+                  {u.name || "(no name)"}
+                </p>
+                <p className={`text-xs ${t.textMuted} truncate`}>
+                  {u.email ?? u.phone}
+                </p>
               </div>
               <select
+                aria-label={`Role for ${u.name || u.email || u.phone}`}
                 value={u.role ?? ""}
-                onChange={(e) => handleRoleChange(u.id, e.target.value as NonNullable<User["role"]>)}
+                onChange={(e) =>
+                  handleRoleChange(
+                    u.id,
+                    e.target.value as NonNullable<User["role"]>,
+                  )
+                }
                 disabled={savingId === u.id}
                 className={`h-9 ${t.inputField} px-2 text-sm shrink-0`}
               >
-                {!u.role && <option value="" disabled>No role</option>}
+                {!u.role && (
+                  <option value="" disabled>
+                    No role
+                  </option>
+                )}
                 {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
                 ))}
               </select>
             </div>

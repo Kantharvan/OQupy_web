@@ -20,7 +20,7 @@ Keep external payment, email, SMS and production data out of automated tests.
 Browser tests run the production build, with API calls intercepted using controlled
 fixtures at `http://127.0.0.1:4400/api/v1`. They validate frontend behavior and API
 payloads, not a running backend. Desktop uses IST and mobile uses a US timezone to
-catch accidental browser-local booking conversions. No coverage threshold is used.
+catch accidental browser-local booking conversions. Google Identity Services is mocked; the test build uses a dummy client ID and cannot verify real OAuth. No coverage threshold is used.
 Do not deploy the test build; normal deployments use `npm run build` and their own
 API environment. Run the backend's independent E2E suite for server contracts.
 

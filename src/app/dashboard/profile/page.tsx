@@ -1,96 +1,96 @@
 "use client";
-
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { updateUserProfile } from "@/lib/api/users";
-import { t } from "@/styles/tokens";
-
-const ROLE_LABELS: Record<string, string> = {
-  studio_owner: "Studio Owner",
-  instructor: "Instructor",
-  student: "Student",
-  admin: "Admin",
-};
-
+import { PageHeading } from "@/components/ui/page-heading";
 export default function ProfilePage() {
   const { user, setUser } = useAuth();
-  const [name, setName] = useState(user?.name ?? "");
-  const [isSaving, setIsSaving] = useState(false);
-  const [savedMsg, setSavedMsg] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSave(e: React.FormEvent) {
+  const [name, setName] = useState(user?.name || "");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!user) return;
-    setIsSaving(true);
-    setError(null);
-    setSavedMsg(null);
+    if (!user || !name.trim()) return;
+    setSaving(true);
+    setError("");
+    setMessage("");
     try {
-      const updated = await updateUserProfile(user.id, { name: name.trim() || undefined });
-      setUser(updated);
-      setSavedMsg("Saved.");
+      setUser(await updateUserProfile(user.id, { name: name.trim() }));
+      setMessage("Your profile has been updated.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      setError(
+        err instanceof Error ? err.message : "Could not save your profile.",
+      );
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   }
-
   return (
-    <div className="max-w-lg">
-      <div className="mb-6">
-        <h2 className={`text-xl font-bold ${t.textPrimary}`}>Profile</h2>
-        <p className={`text-sm ${t.textMuted} mt-0.5`}>Manage your account details.</p>
-      </div>
-
-      <div className={`${t.cardBox} p-6 flex flex-col gap-5`}>
-        <div className="flex flex-col gap-1">
-          <label className={`text-xs uppercase tracking-wider ${t.textMuted}`}>Role</label>
-          <p className={`text-sm font-medium ${t.textPrimary}`}>
-            {user?.role ? (ROLE_LABELS[user.role] ?? user.role) : "—"}
+    <>
+      <PageHeading
+        eyebrow="YOUR ACCOUNT"
+        title="Make yourself at home."
+        description="Keep your details up to date, so every session starts smoothly."
+      />
+      <div className="profile-grid">
+        <section className="surface-card profile-summary">
+          <span className="avatar avatar-large">
+            {(user?.name || "O").slice(0, 1).toUpperCase()}
+          </span>
+          <h2>{user?.name || "Your profile"}</h2>
+          <p className="tag">{user?.role?.replace("_", " ")}</p>
+          <dl>
+            {user?.email && (
+              <>
+                <dt>Email</dt>
+                <dd>{user.email}</dd>
+              </>
+            )}
+            {user?.phone && (
+              <>
+                <dt>Phone</dt>
+                <dd>{user.phone}</dd>
+              </>
+            )}
+          </dl>
+        </section>
+        <section className="surface-card profile-form">
+          <p className="eyebrow">THE BASICS</p>
+          <h2>Personal details</h2>
+          <p className="page-description">
+            This is how your name appears on bookings and requests.
           </p>
-        </div>
-
-        {user?.email && (
-          <div className="flex flex-col gap-1">
-            <label className={`text-xs uppercase tracking-wider ${t.textMuted}`}>Email</label>
-            <p className={`text-sm ${t.textSecondary}`}>{user.email}</p>
-          </div>
-        )}
-
-        {user?.phone && (
-          <div className="flex flex-col gap-1">
-            <label className={`text-xs uppercase tracking-wider ${t.textMuted}`}>Phone</label>
-            <p className={`text-sm ${t.textSecondary}`}>{user.phone}</p>
-          </div>
-        )}
-
-        <div className={`border-t border-border`} />
-
-        <form onSubmit={handleSave} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className={`text-xs uppercase tracking-wider ${t.textMuted}`}>Display Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-              className={`h-10 ${t.inputField} px-3 text-sm`}
-            />
-          </div>
-
-          {error && <p className="text-red-400 text-xs">{error}</p>}
-          {savedMsg && <p className="text-green-400 text-xs">{savedMsg}</p>}
-
-          <button
-            type="submit"
-            disabled={isSaving}
-            className={`h-10 ${t.btnPrimary} text-sm self-start px-6`}
-          >
-            {isSaving ? "Saving…" : "Save changes"}
-          </button>
-        </form>
+          <form onSubmit={save}>
+            <label className="form-field">
+              Display name
+              <input
+                required
+                autoComplete="name"
+                value={name}
+                maxLength={100}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+            {error && (
+              <p role="alert" className="notice notice-error">
+                {error}
+              </p>
+            )}
+            {message && (
+              <p role="status" className="notice notice-success">
+                {message}
+              </p>
+            )}
+            <button
+              className="button-primary"
+              disabled={saving || !name.trim()}
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+          </form>
+        </section>
       </div>
-    </div>
+    </>
   );
 }

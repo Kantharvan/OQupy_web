@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { getBookingsByStudio, type Booking } from "@/lib/api/bookings";
 import { enroll } from "@/lib/api/enrollments";
+import { formatSessionDate, durationLabel } from "@/lib/booking/availability";
 import { t } from "@/styles/tokens";
 export function PublicEventsSection({ studioId }: { studioId: string }) {
   const [events, setEvents] = useState<Booking[]>([]);
@@ -74,18 +75,8 @@ export function PublicEventsSection({ studioId }: { studioId: string }) {
                   {ev.eventName}
                 </p>
                 <p className={`text-xs ${t.textMuted} mt-0.5`}>
-                  {new Date(ev.dateTime).toLocaleDateString("en-IN", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                  })}
-                  {" · "}
-                  {new Date(ev.dateTime).toLocaleTimeString("en-IN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                  {" · "}
-                  {ev.durationHours}h
+                  {formatSessionDate(ev.dateTime)} IST ·{" "}
+                  {durationLabel(ev.durationHours)}
                 </p>
                 {errors[ev.id] && (
                   <p className="text-red-400 text-xs mt-0.5">{errors[ev.id]}</p>

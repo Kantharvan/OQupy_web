@@ -10,7 +10,7 @@
     "lint": "eslint",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "build:test": "NEXT_PUBLIC_API_URL=http://127.0.0.1:4400/api/v1 next build"
+    "build:test": "NEXT_PUBLIC_API_URL=http://127.0.0.1:4400/api/v1 NEXT_PUBLIC_GOOGLE_CLIENT_ID=browser-test.apps.googleusercontent.com next build"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
