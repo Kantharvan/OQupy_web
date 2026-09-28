@@ -8,14 +8,15 @@ Read `CLAUDE.md`, `docs/flow.md`, and the relevant source before changing behavi
 
 ## Architecture and conventions
 
-- Next.js 16.2.4 App Router, React 19, strict TypeScript, Tailwind v4; npm lockfile at repository root.
+- Next.js 16.3.6 App Router, React 19, strict TypeScript, Tailwind v4; npm lockfile at repository root.
 - `src/app/(auth)`: phone OTP and Google login; `(onboarding)`: onboarding; `studios/`: discovery, studio details and booking flow; `dashboard/`: role-specific management.
-- `src/lib/api/`: typed endpoint wrappers. Use `apiRequest` in `client.ts` for bearer headers, one silent refresh/retry on 401, and session clearing.
+- `src/lib/api/`: typed endpoint wrappers. Use `apiRequest` in `client.ts` for bearer headers, one silent refresh/retry on protected-endpoint 401s, and session clearing. OTP send/verify and Google sign-in failures remain on their auth screens instead of triggering session refresh.
 - Access tokens live in memory. Refresh tokens also persist under localStorage key `oqupy_refresh`; refresh returns only a new access token. Do not implement the older notes' assumption that both tokens rotate or are memory-only.
 - `src/context/`: auth state and Google provider. Confirm actual role/null-role routing in components and backend contracts; do not infer permission enforcement from UI visibility.
-- Use `t` from `@/styles/tokens`; add missing tokens there. Colors belong in `src/app/globals.css`, not raw hex or Tailwind color classes in components. Follow the design conventions in `CLAUDE.md`.
-- Save browser screenshots under ignored `screenshots/`.
-- Payment UI/fields are placeholders, not evidence of a working payment integration.
+- Public discovery starts at `/studios` (the root redirects there). Shared public UI lives in `src/components/ui/`, `studios/`, and `booking/`; booking rules and safe auth return paths live in `src/lib/booking/`. Preserve the selected date/time/duration through login and onboarding.
+- Existing dashboard/auth UI uses `t` from `@/styles/tokens`; the public studio journey uses shared classes in `src/app/globals.css` and Tailwind utilities. Reuse the relevant components and styles; do not introduce another parallel design system. The older blanket token-only guidance in `CLAUDE.md` does not describe all of the current public UI.
+- Keep temporary screenshots under ignored `screenshots/` or Playwright `test-results/`. Deliberate, sanitized PR review screenshots and limitations can be committed under `docs/review/`, as in `docs/review/studio-booking/`.
+- Booking submits a request awaiting approval and collects no payment. Legacy price parsing and full-duration slot checks live in `src/lib/booking/`; malformed/zero rates block requests. Times are explicitly IST, not the visitor timezone. Server-calculated prices and studio-local availability day boundaries remain follow-ups documented in `docs/review/studio-booking/README.md`; frontend validation does not enforce server security.
 
 ## Environments and deployment
 
@@ -30,7 +31,7 @@ These are repository-documented targets, not a guarantee of current hosting-dash
 
 ## Local setup
 
-Run commands from this repository root. CI uses Node 20; use a compatible Node 20 runtime (the sibling backend pins 20.19.0), then `npm ci`.
+Run commands from this repository root. CI uses Node 22; use Node 22 to match CI, then `npm ci`. The sibling backend still has a 20.19.0 local pin; do not mistake it for the frontend CI version.
 
 Create an ignored `.env.development`:
 
@@ -56,12 +57,16 @@ NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
 ```bash
 npm run lint
 npx tsc --noEmit
-npm run build
+npm run build:test
+npx playwright install chromium
+npm test
 ```
 
-These match `.github/workflows/ci.yml`; there is no committed frontend unit/e2e test script. For UI/API changes, also exercise the affected flow against a local or explicitly selected dev API and record coverage/limitations. A successful build alone does not validate login or booking.
+CI runs these checks with Chromium system dependencies installed. Playwright tests use a production build on port 3100 and intercept the fixture API at `http://127.0.0.1:4400/api/v1`; they do not call a running backend. Desktop runs in IST and mobile Chromium in America/New_York. They cover discovery, OTP/onboarding, retained booking selections and payloads, price/availability rules, conflict/error recovery and layout overflow. Failure reports are uploaded by CI. For full-stack contract changes, also run the backend suite against disposable services; browser mocks alone cannot prove integration. Never deploy `build:test` output: its public API URL is intentionally the fixture endpoint.
 
 `npm run build:prod` explicitly loads `.env.production`; `npm run build` runs Next's normal build and `npm start` serves its output. Set intended public variables before building; do not rely on changing them only when starting an already-built client. Audit ignored `.env.local` and shell overrides when a target appears wrong, without printing credentials.
+
+The stable required-check candidate is `Lint, Typecheck & Build`, which now includes browser tests. Read `CONTRIBUTING.md` for PR-only changes, meaningful regression tests and repository protection follow-ups; workflow success alone does not prove required checks are enforced.
 
 The nightly smoke workflow uses live production endpoints; do not use it as a substitute for isolated feature tests. Documentation-only changes need source/link/command review, not fabricated application test results.
 
