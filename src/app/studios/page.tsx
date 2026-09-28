@@ -1,239 +1,234 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
-import Link from "next/link";
-import { t } from "@/styles/tokens";
-import { getStudios, type Studio, type StudiosQuery } from "@/lib/api/studios";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getStudios, type StudiosResponse } from "@/lib/api/studios";
+import { SiteHeader } from "@/components/ui/site-header";
+import { StudioCard } from "@/components/studios/studio-card";
 
-const PAGE_SIZE = 12;
+function StudiosContent() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const search = params.get("search") || "";
+  const location = params.get("location") || "";
+  const page = Math.max(1, Number(params.get("page")) || 1);
+  const [result, setResult] = useState<StudiosResponse | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [retry, setRetry] = useState(0);
 
-function StudioCard({ studio }: { studio: Studio }) {
-  const cover = studio.images[0];
+  useEffect(() => {
+    let active = true;
+    getStudios({ search, location, page, limit: 12 })
+      .then((data) => {
+        if (active) {
+          setResult(data);
+          setError("");
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setError(
+            err instanceof Error ? err.message : "Unable to load studios",
+          );
+          setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [search, location, page, retry]);
+
+  function navigate(query: URLSearchParams) {
+    setLoading(true);
+    setError("");
+    router.push(`/studios${query.size ? `?${query}` : ""}`, { scroll: false });
+    setRetry((n) => n + 1);
+  }
+
   return (
-    <Link
-      href={`/studios/${encodeURIComponent(studio.name)}`}
-      className={`${t.cardBox} overflow-hidden flex flex-col hover:border-zinc-600 transition-colors cursor-pointer`}
-    >
-      <div className="relative w-full h-44 bg-bg-input flex items-center justify-center overflow-hidden">
-        {cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={cover} alt={studio.name} className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-5xl opacity-30">🏢</span>
-        )}
-      </div>
-      <div className="p-4 flex flex-col gap-1 flex-1">
-        <h3 className={`font-semibold text-sm ${t.textPrimary} truncate`}>{studio.name}</h3>
-        <p className={`text-xs ${t.textMuted} truncate`}>📍 {studio.location}</p>
-        {studio.description && (
-          <p className={`text-xs ${t.textSecondary} mt-1 line-clamp-2`}>{studio.description}</p>
-        )}
-        <div className="mt-auto pt-3 flex items-center justify-between">
-          <span className={`font-bold text-sm ${t.brandText}`}>
-            ₹{studio.price}<span className={`text-xs font-normal ${t.textMuted}`}>/hr</span>
-          </span>
-          {studio.amenities.length > 0 && (
-            <span className={`text-xs ${t.textMuted}`}>{studio.amenities.slice(0, 2).join(" · ")}</span>
-          )}
+    <>
+      <SiteHeader />
+      <main className="page-wrap">
+        <section className="browse-intro">
+          <div>
+            <p className="eyebrow">A little room. Endless possibility.</p>
+            <h1 className="hero-title">
+              Find your space.
+              <br />
+              <span>Make it yours.</span>
+            </h1>
+          </div>
+          <p className="intro-copy">
+            For rehearsals, quiet practice and your next big idea. Discover a
+            studio that fits the way you move.
+          </p>
+        </section>
+        <form
+          key={`${search}:${location}`}
+          className="search-panel"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const data = new FormData(e.currentTarget);
+            const q = new URLSearchParams();
+            for (const key of ["search", "location"]) {
+              const value = String(data.get(key) || "").trim();
+              if (value) q.set(key, value);
+            }
+            navigate(q);
+          }}
+        >
+          <label className="search-field">
+            <span>What are you looking for?</span>
+            <input
+              name="search"
+              defaultValue={search}
+              placeholder="Studio name or keyword"
+            />
+          </label>
+          <label className="search-field">
+            <span>Where?</span>
+            <input
+              name="location"
+              defaultValue={location}
+              placeholder="City or neighbourhood"
+            />
+          </label>
+          <button className="button-primary" type="submit">
+            Find a studio <span aria-hidden="true">→</span>
+          </button>
+        </form>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">ROOM TO CREATE</p>
+            <h2>
+              {search || location
+                ? "Your search results"
+                : "Explore the spaces"}
+            </h2>
+          </div>
+          <p className="text-sm text-stone-400" role="status">
+            {loading
+              ? "Finding studios…"
+              : `${result?.total || 0} ${result?.total === 1 ? "space" : "spaces"} to explore`}
+          </p>
         </div>
-      </div>
-    </Link>
+        {(search || location) && (
+          <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-stone-300">
+            <span>
+              Showing {search && `“${search}”`}
+              {search && location && " in "}
+              {location}
+            </span>
+            <button
+              className="text-orange-300 underline underline-offset-4"
+              onClick={() => navigate(new URLSearchParams())}
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
+        {error ? (
+          <section role="alert" className="empty-state">
+            <h3>We couldn’t load the studios</h3>
+            <p>Please try again in a moment.</p>
+            <button
+              className="button-primary"
+              onClick={() => {
+                setLoading(true);
+                setRetry((n) => n + 1);
+              }}
+            >
+              Try again
+            </button>
+          </section>
+        ) : loading ? (
+          <div className="studio-grid" aria-label="Loading studios">
+            {[1, 2, 3].map((n) => (
+              <div
+                key={n}
+                className="h-80 rounded-2xl bg-white/5 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : result?.data.length ? (
+          <div className="studio-grid">
+            {result.data.map((studio) => (
+              <StudioCard key={studio.id} studio={studio} />
+            ))}
+          </div>
+        ) : (
+          <section className="empty-state">
+            <span className="text-4xl text-orange-300" aria-hidden="true">
+              ⌕
+            </span>
+            <h3>
+              {search || location
+                ? "No spaces match just yet"
+                : "New spaces are on their way"}
+            </h3>
+            <p>
+              {search || location
+                ? "Try a different neighbourhood or clear your filters to explore all studios."
+                : "Check back soon to discover studios near you."}
+            </p>
+            {(search || location) && (
+              <button
+                className="button-primary"
+                onClick={() => navigate(new URLSearchParams())}
+              >
+                Explore all studios
+              </button>
+            )}
+          </section>
+        )}
+        {!loading && !error && result && result.total > 12 && (
+          <nav
+            aria-label="Results pages"
+            className="flex justify-center items-center gap-5 mt-10"
+          >
+            <button
+              className="button-secondary"
+              disabled={page === 1}
+              onClick={() => {
+                const q = new URLSearchParams(params);
+                q.set("page", String(page - 1));
+                navigate(q);
+              }}
+            >
+              Previous
+            </button>
+            <span>
+              {page} / {Math.ceil(result.total / 12)}
+            </span>
+            <button
+              className="button-secondary"
+              disabled={page >= Math.ceil(result.total / 12)}
+              onClick={() => {
+                const q = new URLSearchParams(params);
+                q.set("page", String(page + 1));
+                navigate(q);
+              }}
+            >
+              Next
+            </button>
+          </nav>
+        )}
+        <footer className="site-footer">
+          <span>OQupy — The floor is yours.</span>
+          <span>Choose your space. Check a date. Make a request.</span>
+        </footer>
+      </main>
+    </>
   );
 }
 
 export default function StudiosPage() {
-  const [studios, setStudios] = useState<Studio[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [search, setSearch] = useState("");
-  const [location, setLocation] = useState("");
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [debouncedLocation, setDebouncedLocation] = useState("");
-
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search), 400);
-    return () => clearTimeout(id);
-  }, [search]);
-
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedLocation(location), 400);
-    return () => clearTimeout(id);
-  }, [location]);
-
-  const fetchStudios = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const query: StudiosQuery = { page, limit: PAGE_SIZE };
-      if (debouncedSearch) query.search = debouncedSearch;
-      if (debouncedLocation) query.location = debouncedLocation;
-      if (date) query.date = date;
-      if (startTime) query.startTime = startTime;
-      if (endTime) query.endTime = endTime;
-      const res = await getStudios(query);
-      setStudios(res.data);
-      setTotal(res.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load studios");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, debouncedSearch, debouncedLocation, date, startTime, endTime]);
-
-  const [, startTransition] = useTransition();
-
-  useEffect(() => {
-    startTransition(() => setPage(1));
-  }, [debouncedSearch, debouncedLocation, date, startTime, endTime]);
-
-  useEffect(() => {
-    startTransition(() => { fetchStudios(); });
-  }, [fetchStudios]);
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
-  const hasFilters = !!(debouncedSearch || debouncedLocation || date || startTime || endTime);
-
-  function clearFilters() {
-    setSearch("");
-    setLocation("");
-    setDate("");
-    setStartTime("");
-    setEndTime("");
-  }
-
   return (
-    <main className={`min-h-screen ${t.page} px-4 py-8`}>
-      <div className="max-w-6xl mx-auto">
-
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className={`text-3xl font-black tracking-widest ${t.brandText} uppercase`}>OQupy</h1>
-          <p className={`mt-1 ${t.textSecondary} text-sm`}>Find your perfect studio space.</p>
-        </div>
-
-        {/* Search bar + location */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-3">
-          <input
-            type="text"
-            placeholder="Search studios…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={`flex-1 h-11 ${t.inputField} px-4`}
-          />
-          <input
-            type="text"
-            placeholder="Where? (city, area…)"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            className={`w-full sm:w-52 h-11 ${t.inputField} px-4`}
-          />
-        </div>
-
-        {/* Date + time row */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className={`flex-1 h-11 ${t.inputField} px-4 [color-scheme:dark]`}
-          />
-          <input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            placeholder="Start time"
-            className={`flex-1 h-11 ${t.inputField} px-4 [color-scheme:dark]`}
-          />
-          <input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            placeholder="End time"
-            className={`flex-1 h-11 ${t.inputField} px-4 [color-scheme:dark]`}
-          />
-        </div>
-
-        {/* Results count + clear */}
-        {!isLoading && !error && (
-          <div className="flex items-center gap-3 mb-4">
-            <p className={`text-xs ${t.textMuted}`}>
-              {total === 0
-                ? hasFilters ? "No studios match your filters." : "No studios yet."
-                : `${total} studio${total !== 1 ? "s" : ""}${hasFilters ? " found" : ""}`}
-            </p>
-            {hasFilters && (
-              <button
-                onClick={clearFilters}
-                className={`text-xs ${t.link} underline underline-offset-2`}
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div className="text-center py-16">
-            <p className="text-red-400 text-sm mb-4">{error}</p>
-            <button onClick={fetchStudios} className={`h-10 px-6 ${t.btnPrimary}`}>Retry</button>
-          </div>
-        )}
-
-        {/* Loading skeleton */}
-        {isLoading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className={`${t.cardBox} overflow-hidden animate-pulse`}>
-                <div className="w-full h-44 bg-bg-input" />
-                <div className="p-4 flex flex-col gap-2">
-                  <div className="h-3.5 bg-bg-input rounded w-3/4" />
-                  <div className="h-3 bg-bg-input rounded w-1/2" />
-                  <div className="h-3 bg-bg-input rounded w-full mt-1" />
-                  <div className="h-3 bg-bg-input rounded w-5/6" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Grid */}
-        {!isLoading && !error && studios.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {studios.map((studio) => (
-              <StudioCard key={studio.id} studio={studio} />
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {!isLoading && totalPages > 1 && (
-          <div className="flex items-center justify-center gap-3 mt-10">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className={`h-9 px-4 rounded-xl border text-sm ${t.borderInput} ${t.textSecondary} disabled:opacity-30 hover:border-zinc-500 transition-colors`}
-            >
-              ← Prev
-            </button>
-            <span className={`text-sm ${t.textMuted}`}>{page} / {totalPages}</span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className={`h-9 px-4 rounded-xl border text-sm ${t.borderInput} ${t.textSecondary} disabled:opacity-30 hover:border-zinc-500 transition-colors`}
-            >
-              Next →
-            </button>
-          </div>
-        )}
-      </div>
-    </main>
+    <Suspense>
+      <StudiosContent />
+    </Suspense>
   );
 }

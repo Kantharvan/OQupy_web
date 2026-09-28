@@ -46,3 +46,6 @@ next-env.d.ts
 
 # knowledge graph output (belongs in OQupy-KG repo, not here)
 /graphify-out/
+
+/playwright-report/
+/test-results/

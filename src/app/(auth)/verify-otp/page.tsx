@@ -4,7 +4,8 @@ import { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { t } from "@/styles/tokens";
-import { verifyOTP } from "@/lib/api/auth";
+import { studioReturnPath } from "@/lib/booking/return-path";
+import { sendOTP, verifyOTP } from "@/lib/api/auth";
 import { useAuth } from "@/context/AuthContext";
 
 const OTP_LENGTH = 6;
@@ -16,30 +17,41 @@ function VerifyOTPContent() {
   const router = useRouter();
   const { setUser } = useAuth();
   const phone = searchParams.get("phone") ?? "";
+  const next = studioReturnPath(searchParams.get("next"));
+  const [isResending, setIsResending] = useState(false);
   const masked = phone.length >= 4 ? `+91 ••••••${phone.slice(-4)}` : "+91";
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
+  const [resendCycle, setResendCycle] = useState(0);
   const canResend = countdown === 0;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  useEffect(() => { inputRefs.current[0]?.focus(); }, []);
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
+  }, []);
 
   useEffect(() => {
-    if (countdown === 0) return;
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown]);
+    const deadline = Date.now() + RESEND_SECONDS * 1000;
+    const timer = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setCountdown(remaining);
+      if (remaining === 0) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCycle]);
 
   // Dev only: auto-fetch OTP from Redis via local API route
   useEffect(() => {
     if (!IS_DEV || !phone) return;
     const fetchDevOtp = async () => {
       try {
-        const res = await fetch(`/api/dev/otp?phone=${encodeURIComponent(phone)}`);
+        const res = await fetch(
+          `/api/dev/otp?phone=${encodeURIComponent(phone)}`,
+        );
         const data = await res.json();
         if (data.otp) setDevOtp(data.otp);
       } catch {
@@ -54,28 +66,59 @@ function VerifyOTPContent() {
 
   const handleChange = useCallback((index: number, value: string) => {
     const digit = value.replace(/\D/g, "").slice(-1);
-    setOtp((prev) => { const next = [...prev]; next[index] = digit; return next; });
+    setOtp((prev) => {
+      const next = [...prev];
+      next[index] = digit;
+      return next;
+    });
     if (digit && index < OTP_LENGTH - 1) inputRefs.current[index + 1]?.focus();
   }, []);
 
-  const handleKeyDown = useCallback((index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) inputRefs.current[index - 1]?.focus();
-  }, [otp]);
+  const handleKeyDown = useCallback(
+    (index: number, e: React.KeyboardEvent) => {
+      if (e.key === "Backspace" && !otp[index] && index > 0)
+        inputRefs.current[index - 1]?.focus();
+    },
+    [otp],
+  );
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
-    const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH).split("");
-    setOtp((prev) => { const next = [...prev]; digits.forEach((d, i) => { next[i] = d; }); return next; });
+    const digits = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, OTP_LENGTH)
+      .split("");
+    setOtp((prev) => {
+      const next = [...prev];
+      digits.forEach((d, i) => {
+        next[i] = d;
+      });
+      return next;
+    });
     inputRefs.current[Math.min(digits.length, OTP_LENGTH - 1)]?.focus();
   }, []);
 
-  function handleResend() {
-    if (!canResend) return;
-    setOtp(Array(OTP_LENGTH).fill(""));
-    setCountdown(RESEND_SECONDS);
+  async function handleResend() {
+    if (!canResend || isResending) return;
+    setIsResending(true);
     setError(null);
-    setDevOtp(null);
-    inputRefs.current[0]?.focus();
+    try {
+      await sendOTP(phone);
+      setOtp(Array(OTP_LENGTH).fill(""));
+      setCountdown(RESEND_SECONDS);
+      setResendCycle((cycle) => cycle + 1);
+      setDevOtp(null);
+      inputRefs.current[0]?.focus();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not resend the code. Try again.",
+      );
+    } finally {
+      setIsResending(false);
+    }
   }
 
   async function handleVerify(e: React.FormEvent) {
@@ -91,16 +134,22 @@ function VerifyOTPContent() {
       setUser(user);
 
       if (isNewUser || !user.role) {
-        router.push("/onboarding");
+        router.push(
+          `/onboarding${next ? `?next=${encodeURIComponent(next)}` : ""}`,
+        );
+      } else if (next && user.role !== "studio_owner") {
+        router.push(next);
       } else if (user.role === "student") {
         router.push("/studios");
       } else if (user.role === "admin") {
-        router.push("/admin");
+        router.push("/dashboard/admin");
       } else {
         router.push("/dashboard");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid OTP. Please try again.");
+      setError(
+        err instanceof Error ? err.message : "Invalid OTP. Please try again.",
+      );
       setIsSubmitting(false);
     }
   }
@@ -108,18 +157,24 @@ function VerifyOTPContent() {
   const filled = otp.join("").length === OTP_LENGTH;
 
   return (
-    <main className={`min-h-screen ${t.page} flex flex-col items-center justify-center px-4`}>
+    <main
+      className={`min-h-screen ${t.page} flex flex-col items-center justify-center px-4`}
+    >
       {/* Dev OTP toast */}
       {IS_DEV && devOtp && (
         <div className="fixed top-4 right-4 z-50 bg-yellow-400 text-black text-sm font-mono font-bold px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide opacity-70">DEV</span>
+          <span className="text-xs font-semibold uppercase tracking-wide opacity-70">
+            DEV
+          </span>
           <span>OTP: {devOtp}</span>
           <button
             onClick={() => {
               const digits = devOtp.split("");
               setOtp((prev) => {
                 const next = [...prev];
-                digits.forEach((d, i) => { next[i] = d; });
+                digits.forEach((d, i) => {
+                  next[i] = d;
+                });
                 return next;
               });
               inputRefs.current[OTP_LENGTH - 1]?.focus();
@@ -128,41 +183,59 @@ function VerifyOTPContent() {
           >
             autofill
           </button>
-          <button onClick={() => setDevOtp(null)} className="ml-1 opacity-60 hover:opacity-100">✕</button>
+          <button
+            onClick={() => setDevOtp(null)}
+            className="ml-1 opacity-60 hover:opacity-100"
+          >
+            ✕
+          </button>
         </div>
       )}
 
       <div className="mb-8 text-center">
-        <h1 className={`text-5xl font-black tracking-widest ${t.brandText} uppercase`}>OQupy</h1>
-        <p className={`mt-3 ${t.textPrimary} text-base font-medium`}>Enter the code sent to your phone</p>
+        <h1
+          className={`text-5xl font-black tracking-widest ${t.brandText} uppercase`}
+        >
+          OQupy
+        </h1>
+        <p className={`mt-3 ${t.textPrimary} text-base font-medium`}>
+          Enter the code sent to your phone
+        </p>
         <p className={`mt-1 ${t.textSecondary} text-sm`}>{masked}</p>
       </div>
 
       <div className={`w-full max-w-sm ${t.cardBox} p-8`}>
-        <h2 className={`text-xl font-semibold ${t.textPrimary} text-center mb-6`}>Verify OTP</h2>
+        <h2
+          className={`text-xl font-semibold ${t.textPrimary} text-center mb-6`}
+        >
+          Verify OTP
+        </h2>
 
         <form onSubmit={handleVerify} className="flex flex-col gap-5">
           <div className="flex gap-2 justify-between" onPaste={handlePaste}>
             {otp.map((digit, i) => (
               <input
                 key={i}
-                ref={(el) => { inputRefs.current[i] = el; }}
+                ref={(el) => {
+                  inputRefs.current[i] = el;
+                }}
+                aria-label={`Code digit ${i + 1}`}
                 type="text"
                 inputMode="numeric"
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className={`w-11 h-13 ${t.input} border ${t.borderInput} rounded-xl text-white text-xl font-bold text-center outline-none focus:border-brand transition-colors`}
+                className={`min-w-0 w-full h-13 ${t.input} border ${t.borderInput} rounded-xl text-white text-xl font-bold text-center outline-none focus:border-brand transition-colors`}
               />
             ))}
           </div>
 
-          {error && (
-            <p className="text-red-400 text-sm text-center">{error}</p>
-          )}
+          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
-          <p className={`${t.textMuted} text-sm text-center`}>Enter the 6-digit code we sent you.</p>
+          <p className={`${t.textMuted} text-sm text-center`}>
+            Enter the 6-digit code we sent you.
+          </p>
 
           <button
             type="submit"
@@ -174,20 +247,31 @@ function VerifyOTPContent() {
         </form>
 
         <div className="mt-5 text-center">
-          <p className={`${t.textSecondary} text-sm`}>Didn&apos;t receive the code?</p>
+          <p className={`${t.textSecondary} text-sm`}>
+            Didn&apos;t receive the code?
+          </p>
           <button
             onClick={handleResend}
-            disabled={!canResend}
+            disabled={!canResend || isResending}
             className={`mt-1 text-sm font-medium transition-colors ${
-              canResend ? `${t.brandText} hover:text-[#fb923c]` : `${t.textMuted} cursor-not-allowed`
+              canResend
+                ? `${t.brandText} hover:text-[#fb923c]`
+                : `${t.textMuted} cursor-not-allowed`
             }`}
           >
-            {canResend ? "Resend OTP" : `Resend OTP (${countdown}s)`}
+            {isResending
+              ? "Sending…"
+              : canResend
+                ? "Resend OTP"
+                : `Resend OTP (${countdown}s)`}
           </button>
         </div>
       </div>
 
-      <Link href="/login" className={`mt-6 flex items-center gap-1 ${t.link} text-sm font-medium`}>
+      <Link
+        href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+        className={`mt-6 flex items-center gap-1 ${t.link} text-sm font-medium`}
+      >
         ← Back to Login
       </Link>
     </main>
