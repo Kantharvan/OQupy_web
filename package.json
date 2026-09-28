@@ -7,24 +7,28 @@
     "build": "next build",
     "build:prod": "dotenv -e .env.production -- next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "build:test": "NEXT_PUBLIC_API_URL=http://127.0.0.1:4400/api/v1 next build"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
     "date-fns": "^4.4.0",
-    "next": "16.2.4",
+    "next": "^16.3.6",
     "react": "19.2.4",
     "react-day-picker": "^9.14.0",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "^16.3.6",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

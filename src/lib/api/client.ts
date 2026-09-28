@@ -1,4 +1,7 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://oqupy-prod.up.railway.app/api/v1";
+import { studioReturnPath } from "@/lib/booking/return-path";
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "https://oqupy-prod.up.railway.app/api/v1";
 const REFRESH_KEY = "oqupy_refresh";
 
 type TokenStore = {
@@ -57,7 +60,7 @@ type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
-  retry = true
+  retry = true,
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -74,11 +77,22 @@ export async function apiRequest<T>(
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
 
-  if (res.status === 401 && retry) {
+  if (
+    res.status === 401 &&
+    retry &&
+    !["/auth/verify-otp", "/auth/send-otp", "/auth/google"].includes(path)
+  ) {
     const refreshed = await refreshTokens();
     if (refreshed) return apiRequest<T>(path, options, false);
     clearTokens();
-    if (typeof window !== "undefined") window.location.href = "/login";
+    if (typeof window !== "undefined") {
+      const next = studioReturnPath(
+        window.location.pathname + window.location.search,
+      );
+      // Reset in-memory auth state with a full navigation from this non-React API module.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.href = `/login${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+    }
     throw new Error("Session expired");
   }
 

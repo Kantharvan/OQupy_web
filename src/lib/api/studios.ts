@@ -35,7 +35,7 @@ export type StudiosResponse = {
 export type StudiosQuery = {
   search?: string;
   location?: string;
-  // date/time filters — UI-ready, backend support pending (see contracts/studios.md)
+  // Supported by the API; the public browse UI checks times on each studio detail.
   date?: string;       // YYYY-MM-DD
   startTime?: string;  // HH:mm
   endTime?: string;    // HH:mm
@@ -51,7 +51,7 @@ export type BusyWindow = {
 
 export type AvailabilityResponse = {
   date: string;
-  operationalHours: OperationalHoursDay;
+  operationalHours: OperationalHoursDay | null;
   busy: BusyWindow[];
 };
 
