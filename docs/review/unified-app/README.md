@@ -1,5 +1,7 @@
 # Unified Oqupy experience
 
+PR #14 review record. The production follow-up confirmed Google button appearance but did not complete OAuth; see [current status](../../progress.md) for dated deployment evidence. The validation boundaries below describe checks performed before merge.
+
 Public discovery, authentication and every dashboard route now share the dark surface palette, deeper orange (#f65b0b), header, controls and typography. Desktop workspace navigation becomes a horizontal role-aware navigation strip on mobile. The confirmation link opens the redesigned bookings page.
 
 Booking duration is editable from 0.5 to 24 hours in half-hour increments, subject to the complete interval fitting availability. Slots display AM/PM; owner hours and timed blockouts use explicit hour/minute/AM-PM controls while retaining existing API contracts. Timed blockouts now convert IST to UTC correctly.

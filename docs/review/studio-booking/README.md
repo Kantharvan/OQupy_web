@@ -1,5 +1,7 @@
 # Studio booking review
 
+Historical record for PR #13. The workspace UI follow-up shipped in [PR #14](../unified-app/README.md); see [current status](../../progress.md) for remaining work. Test counts and screenshots below describe this earlier change.
+
 Screenshots use isolated Playwright fixture data (not production listings).
 
 ![Desktop studio discovery](browse-desktop.png)
