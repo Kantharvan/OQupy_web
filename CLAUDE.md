@@ -21,3 +21,5 @@ Preserve custom durations and safe booking return paths through login/onboarding
 ## Evidence and delivery
 
 Make changes through feature branches and PRs. Tests must protect observable behavior and failure cases; no coverage quota applies. Use ignored `test-results/` or `screenshots/` for temporary captures and `docs/review/` for deliberate sanitized review evidence. Report whether checks used fixtures, a real local backend or production, and distinguish Google button appearance from a completed OAuth flow.
+
+See [docs/testing.md](docs/testing.md) for the automated release checks, companion checkout permissions and remaining provider verification.

@@ -33,6 +33,6 @@ force pushes. For a solo-maintainer repository, do not require an approval the P
 author cannot supply; request review where a second maintainer is available.
 
 On September 29, frontend main was configured to require `Lint, Typecheck & Build`
-and `Full stack integration`, strict up-to-date checks, and administrator enforcement.
+and `Full stack integration`, strict up-to-date checks, resolved conversations, and administrator enforcement.
 PRs remain required with zero mandatory approvals for the solo maintainer.
 See `docs/testing.md` for companion access, rollout and provider verification.
