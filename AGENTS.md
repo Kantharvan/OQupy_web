@@ -17,7 +17,7 @@ Read `CLAUDE.md`, `docs/flow.md`, and the relevant source before changing behavi
 - Public, auth and dashboard routes share `SiteHeader`, global colour tokens and reusable controls. Auth pages use `AuthShell`; dashboard pages use the role-aware workspace layout, `PageHeading`, `BookingCard` and `BlockoutsPanel`. `t` in `@/styles/tokens` points to the shared surface/control classes. Extend these components rather than introducing a parallel design system. `CLAUDE.md` points to these shared conventions.
 - Session lengths accept 0.5–24 hours in half-hour increments and must fit the complete available interval. Display 12-hour AM/PM times while retaining API `HH:mm` operating hours and ISO booking timestamps derived from IST selections. Use `TimeSelect` for editable operating/blockout times. UI role guards improve navigation but do not replace backend authorization.
 - Keep temporary screenshots under ignored `screenshots/` or Playwright `test-results/`. Deliberate, sanitized PR review screenshots and limitations can be committed under `docs/review/`, as in `docs/review/studio-booking/`.
-- Booking submits a request awaiting approval and collects no payment. Legacy price parsing and full-duration slot checks live in `src/lib/booking/`; malformed/zero rates block requests. Times are explicitly IST, not the visitor timezone. Server-calculated prices and studio-local availability day boundaries remain follow-ups documented in `docs/review/studio-booking/README.md`; frontend validation does not enforce server security.
+- Booking submits a request awaiting approval and collects no payment. Legacy price parsing and full-duration slot checks live in `src/lib/booking/`; malformed/zero rates block requests. Times are explicitly IST, not the visitor timezone. The backend enforces server-calculated prices and IST availability boundaries; older review notes predate that hardening. Frontend validation does not replace server enforcement.
 
 ## Environments and deployment
 
@@ -84,3 +84,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 Follow CONTRIBUTING.md. Make changes through PRs, and test user behavior and
 failure cases rather than pursuing coverage percentages. Include validation
 results and known limitations in every PR.
+
+## Automated release verification
+
+Read `docs/testing.md` for the real cross-repository CI, read-only production browser smoke, credential scope, merge gates and provider limitations. Never deploy integration/test builds or run mutating suites against hosted data.

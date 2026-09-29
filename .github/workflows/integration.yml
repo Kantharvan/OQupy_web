@@ -1,0 +1,117 @@
+name: Full stack integration
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+    inputs:
+      companion_ref:
+        description: Companion repository branch or SHA (main for release verification)
+        default: main
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: full-stack-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  integration:
+    name: Full stack integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: oqupy
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: oqupy_integration_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U oqupy -d oqupy_integration_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://oqupy:ci-only-password@127.0.0.1:5432/oqupy_integration_test
+      REDIS_URL: redis://127.0.0.1:6379
+    steps:
+      - name: Select private temporary fixture path
+        run: echo "OQUPY_INTEGRATION_FIXTURE=$RUNNER_TEMP/browser-fixture.json" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          path: web
+          persist-credentials: false
+      - name: Require companion read access
+        env:
+          READ_KEY: ${{ secrets.OQUPY_SRV_READ_KEY }}
+        run: |
+          if [ -z "$READ_KEY" ]; then
+            echo '::error::Configure OQUPY_SRV_READ_KEY with a read-only deploy key for OQupy_srv. Fork PRs need a trusted maintainer branch; do not use pull_request_target.'
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          repository: Kantharvan/OQupy_srv
+          ref: ${{ inputs.companion_ref || 'main' }}
+          ssh-key: ${{ secrets.OQUPY_SRV_READ_KEY }}
+          persist-credentials: false
+          path: server
+      - name: Record exact tested revisions
+        run: |
+          git -C server rev-parse HEAD
+          git -C web rev-parse HEAD
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            server/oqupy-srv/package-lock.json
+            web/package-lock.json
+      - name: Install backend and migrate disposable database
+        working-directory: server/oqupy-srv
+        run: |
+          npm ci
+          node scripts/isolated-env.cjs npm run build
+          node scripts/isolated-env.cjs npm run migrate:deploy
+          node scripts/isolated-env.cjs npx ts-node scripts/browser-fixture.ts create "$OQUPY_INTEGRATION_FIXTURE"
+      - name: Start isolated backend
+        working-directory: server/oqupy-srv
+        run: |
+          node scripts/isolated-env.cjs node dist/src/main > "$RUNNER_TEMP/backend.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/backend.pid"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:4401/api/v1/health > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo '::error::Isolated backend failed to start'
+          exit 1
+      - name: Build frontend and run real journeys
+        working-directory: web
+        run: |
+          npm ci
+          npm run build:integration
+          npx playwright install --with-deps chromium
+          npm run test:integration
+      - name: Remove fixture and stop backend
+        if: always()
+        run: |
+          if [ -f "$OQUPY_INTEGRATION_FIXTURE" ]; then
+            (cd server/oqupy-srv && node scripts/isolated-env.cjs npx ts-node scripts/browser-fixture.ts cleanup "$OQUPY_INTEGRATION_FIXTURE")
+          fi
+          if [ -f "$RUNNER_TEMP/backend.pid" ]; then kill "$(cat "$RUNNER_TEMP/backend.pid")" || true; fi
+      - name: Upload failure screenshots only
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-screenshots
+          path: web/test-results/**/*.png
+          if-no-files-found: ignore
+          retention-days: 7
