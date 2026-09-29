@@ -1,7 +1,14 @@
 import { apiRequest } from "./client";
 
-export type BookingStatus = "AwaitingApproval" | "Confirmed" | "Cancelled" | "Completed";
-export type BookingType = "instructor_event" | "student_practice" | "owner_event";
+export type BookingStatus =
+  | "AwaitingApproval"
+  | "Confirmed"
+  | "Cancelled"
+  | "Completed";
+export type BookingType =
+  | "instructor_event"
+  | "student_practice"
+  | "owner_event";
 export type PaymentMethod = "upi" | "netbanking" | "card" | "wallet";
 export type PaymentStatus = "Pending" | "Paid" | "Refunded";
 
@@ -47,12 +54,24 @@ export type CreateBookingDto = {
   paymentAmount?: number;
 };
 
-export async function getBookingsByStudio(studioId: string, page = 1, limit = 20): Promise<BookingsResponse> {
-  return apiRequest<BookingsResponse>(`/bookings/studio/${studioId}?page=${page}&limit=${limit}`);
+export async function getBookingsByStudio(
+  studioId: string,
+  page = 1,
+  limit = 20,
+): Promise<BookingsResponse> {
+  return apiRequest<BookingsResponse>(
+    `/bookings/studio/${studioId}?page=${page}&limit=${limit}`,
+  );
 }
 
-export async function getUserBookings(userId: string, page = 1, limit = 50): Promise<BookingsResponse> {
-  return apiRequest<BookingsResponse>(`/bookings/user/${userId}?page=${page}&limit=${limit}`);
+export async function getUserBookings(
+  userId: string,
+  page = 1,
+  limit = 50,
+): Promise<BookingsResponse> {
+  return apiRequest<BookingsResponse>(
+    `/bookings/user/${userId}?page=${page}&limit=${limit}`,
+  );
 }
 
 export async function createBooking(dto: CreateBookingDto): Promise<Booking> {
@@ -65,4 +84,27 @@ export async function confirmBooking(id: string): Promise<Booking> {
 
 export async function cancelBooking(id: string): Promise<Booking> {
   return apiRequest<Booking>(`/bookings/${id}/cancel`, { method: "PATCH" });
+}
+
+// Public projection deliberately excludes creator/contact/payment fields.
+export type PublicClass = Pick<
+  Booking,
+  | "id"
+  | "studioId"
+  | "studioName"
+  | "eventName"
+  | "eventDescription"
+  | "dateTime"
+  | "durationHours"
+  | "status"
+  | "isPublic"
+  | "bookingType"
+>;
+export function getPublicClasses(studioId: string) {
+  return apiRequest<{
+    data: PublicClass[];
+    page: number;
+    limit: number;
+    total: number;
+  }>(`/bookings/public/studio/${studioId}?page=1&limit=50`);
 }
