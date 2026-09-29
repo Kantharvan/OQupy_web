@@ -1,18 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getBookingsByStudio, type Booking } from "@/lib/api/bookings";
+import { getPublicClasses, type PublicClass } from "@/lib/api/bookings";
 import { enroll } from "@/lib/api/enrollments";
 import { formatSessionDate, durationLabel } from "@/lib/booking/availability";
 import { t } from "@/styles/tokens";
 export function PublicEventsSection({ studioId }: { studioId: string }) {
-  const [events, setEvents] = useState<Booking[]>([]);
+  const [events, setEvents] = useState<PublicClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [enrolledIds, setEnrolledIds] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    getBookingsByStudio(studioId, 1, 50)
+    getPublicClasses(studioId)
       .then((res) => {
         const upcoming = res.data.filter(
           (b) =>

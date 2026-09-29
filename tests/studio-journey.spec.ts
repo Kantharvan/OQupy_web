@@ -80,7 +80,7 @@ async function mockAPI(
         })),
         total: bookings.length,
       };
-    else if (path.startsWith("/bookings/studio/"))
+    else if (path.startsWith("/bookings/public/studio/"))
       body = { data: [], total: 0 };
     else if (path === "/bookings" && route.request().method() === "POST") {
       bookings.push(route.request().postDataJSON());
@@ -435,4 +435,54 @@ test("Google uses the supported dark theme, preserves ID-token sign-in and booki
   await expect(
     page.getByRole("button", { name: "9:00 AM", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
+});
+
+test("students load public classes without owner access and can retry enrollment", async ({
+  page,
+}) => {
+  const api = await mockAPI(page, { authenticated: true });
+  await page.route("**/bookings/public/studio/studio-1?*", (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            id: "class-1",
+            studioId: studio.id,
+            studioName: studio.name,
+            eventName: "Morning dance",
+            dateTime: "2030-10-10T04:30:00.000Z",
+            durationHours: 1.5,
+            status: "Confirmed",
+            isPublic: true,
+            bookingType: "instructor_event",
+          },
+        ],
+        total: 1,
+      },
+    }),
+  );
+  const enrollments: unknown[] = [];
+  await page.route("**/enrollments", (route) => {
+    enrollments.push(route.request().postDataJSON());
+    return route.fulfill(
+      enrollments.length === 1
+        ? { status: 503, json: { message: "Please retry enrollment" } }
+        : { status: 201, json: { id: "enrollment-1" } },
+    );
+  });
+  await page.goto(studioURL);
+  await expect(page.getByText("Morning dance", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Enroll", exact: true }).click();
+  await expect(
+    page.getByText("Please retry enrollment", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Enroll", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Enrolled ✓", exact: true }),
+  ).toBeDisabled();
+  expect(enrollments).toEqual([
+    { bookingId: "class-1" },
+    { bookingId: "class-1" },
+  ]);
+  expect(api.unexpected).toEqual([]);
 });
