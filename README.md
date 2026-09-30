@@ -73,3 +73,5 @@ A separate [real-backend mobile booking test](integration/README.md) verifies re
 | `docs/review/` | Sanitized review screenshots and scoped validation records |
 
 See [design and architecture decisions](docs/decisions.md) before introducing a new UI system or changing authentication contracts.
+
+See [release verification](docs/testing.md) for automated full-stack CI and production smoke.

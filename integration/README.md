@@ -1,6 +1,6 @@
 # Browser → real backend booking test
 
-This opt-in test supplements the mocked Playwright suite. It drives the mobile UI through a custom booking request, owner approval and customer confirmation using a real local Nest API, PostgreSQL and Redis. It then cancels via the API and verifies the UI status and released availability. Customer cancellation currently has no dashboard button.
+These tests supplement the mocked Playwright suite. It drives the mobile UI through a custom booking request, owner approval and customer confirmation using a real local Nest API, PostgreSQL and Redis. It then cancels via the API and verifies the UI status and released availability. Customer cancellation currently has no dashboard button.
 
 ## Prerequisites
 
@@ -26,4 +26,4 @@ The test asserts the real persisted API result: 1.5 hours × ₹600 = ₹900, Pe
 
 This test does not intercept API responses or emulate database behavior. It does not verify Google OAuth, SMS delivery or a physical mobile browser. Failure screenshots may contain the local fixture names; traces are disabled to avoid retaining refresh credentials.
 
-The regular `npm test` / PR CI continues to use controlled fixtures. This integration workflow is local opt-in until CI has authorized read access to both private repositories. Do not claim it is an enforced merge gate.
+The regular fixture suite remains separate. `.github/workflows/integration.yml` now runs the real journeys on PRs, main pushes, nightly and manual dispatch, provided the read-only companion checkout key is configured. See [release verification](../docs/testing.md) for key scope, exact triggers, required checks and rollout order. The expanded roles tests require the companion backend fixture expansion.

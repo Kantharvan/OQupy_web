@@ -12,7 +12,8 @@
     "test:ui": "playwright test --ui",
     "build:test": "NEXT_PUBLIC_API_URL=http://127.0.0.1:4400/api/v1 NEXT_PUBLIC_GOOGLE_CLIENT_ID=browser-test.apps.googleusercontent.com next build",
     "build:integration": "NEXT_PUBLIC_API_URL=http://127.0.0.1:4401/api/v1 NEXT_PUBLIC_GOOGLE_CLIENT_ID= next build",
-    "test:integration": "playwright test --config playwright.integration.config.ts"
+    "test:integration": "playwright test --config playwright.integration.config.ts",
+    "test:smoke": "playwright test --config playwright.smoke.config.ts"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",

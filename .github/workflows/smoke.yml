@@ -1,34 +1,49 @@
 name: Nightly Smoke
-
 on:
   schedule:
-    - cron: '15 1 * * *' # 01:15 UTC = 06:45 IST (staggered after srv smoke)
+    - cron: "15 1 * * *"
   workflow_dispatch:
-
+  status:
+permissions:
+  contents: read
+concurrency:
+  group: production-smoke
+  cancel-in-progress: false
 jobs:
   smoke:
-    name: Live frontend smoke test
+    name: Live production smoke
+    if: github.event_name != 'status' || (github.event.state == 'success' && github.event.context == 'Vercel')
     runs-on: ubuntu-latest
-
-    env:
-      WEB: https://oqupy-web.vercel.app
-      API: https://oqupy-prod.up.railway.app/api/v1
-
+    timeout-minutes: 10
     steps:
-      - name: Homepage loads
+      - name: Ignore preview and superseded deployment statuses
+        id: release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {data} = await github.rest.repos.getBranch({...context.repo, branch:'main'});
+            core.setOutput('run', context.eventName !== 'status' || context.payload.sha === data.commit.sha);
+      - uses: actions/checkout@v4
+        if: steps.release.outputs.run == 'true'
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || 'main' }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        if: steps.release.outputs.run == 'true'
+        with:
+          node-version: 22
+      - name: Read-only desktop and mobile browser smoke
+        if: steps.release.outputs.run == 'true'
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L "$WEB")
-          [ "$STATUS" = "200" ] || (echo "Homepage failed: $STATUS" && exit 1)
-
-      - name: Studios browse page loads
-        run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -L "$WEB/studios")
-          [ "$STATUS" = "200" ] || (echo "/studios page failed: $STATUS" && exit 1)
-
-      - name: Availability API reachable from booking flow
-        run: |
-          STUDIO_ID=$(curl -s "$API/studios?limit=1" | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])")
-          DATE=$(date -u +%Y-%m-%d -d "+1 day" 2>/dev/null || date -u -v+1d +%Y-%m-%d)
-          BODY=$(curl -s "$API/studios/$STUDIO_ID/availability?date=$DATE")
-          echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'busy' in d, 'missing busy field'" \
-            || (echo "Availability response malformed: $BODY" && exit 1)
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:smoke
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-browser-smoke
+          path: |
+            smoke-report/
+            test-results/**/*.png
+          retention-days: 7

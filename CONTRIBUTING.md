@@ -32,6 +32,7 @@ rules do not silently stop matching them. Require conversation resolution and bl
 force pushes. For a solo-maintainer repository, do not require an approval the PR
 author cannot supply; request review where a second maintainer is available.
 
-As of September 28, GitHub reports main protected but an empty list of required
-status checks. Full protection settings could not be read with the connector.
-These settings are dashboard configuration, not applied by this PR.
+On September 29, frontend main was configured to require `Lint, Typecheck & Build`
+and `Full stack integration`, strict up-to-date checks, resolved conversations, and administrator enforcement.
+PRs remain required with zero mandatory approvals for the solo maintainer.
+See `docs/testing.md` for companion access, rollout and provider verification.
