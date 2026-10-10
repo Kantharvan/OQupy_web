@@ -194,24 +194,33 @@ function StudioForm({
         className={`h-10 ${t.inputField} px-3 text-sm`}
       />
       <div className="flex gap-3 flex-wrap">
-        <input
-          type="text"
-          aria-label="Location"
-          placeholder="Location"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          required
-          className={`flex-1 h-10 ${t.inputField} px-3 text-sm`}
-        />
-        <input
-          type="text"
-          aria-label="Price per hour (₹)"
-          placeholder="Price per hour (₹)"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          required
-          className={`flex-1 h-10 ${t.inputField} px-3 text-sm`}
-        />
+        <label className="flex-1 min-w-[200px] text-sm">
+          <span className="block mb-2">Location (area and city)</span>
+          <input
+            type="text"
+            aria-label="Location"
+            placeholder="e.g. Indiranagar, Bangalore"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            required
+            className={`w-full h-10 ${t.inputField} px-3 text-sm`}
+          />
+          <span className={`block mt-2 text-xs ${t.textMuted}`}>
+            Include the neighborhood and city so guests can find you in search and Maps.
+          </span>
+        </label>
+        <label className="flex-1 min-w-[200px] text-sm">
+          <span className="block mb-2">Price per hour (₹)</span>
+          <input
+            type="text"
+            aria-label="Price per hour (₹)"
+            placeholder="Price per hour (₹)"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
+            className={`w-full h-10 ${t.inputField} px-3 text-sm`}
+          />
+        </label>
       </div>
       <div className="flex gap-2 flex-wrap">
         {STUDIO_TYPES.map((type) => (
