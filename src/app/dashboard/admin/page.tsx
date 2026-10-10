@@ -22,6 +22,21 @@ const ROLE_OPTIONS: NonNullable<User["role"]>[] = [
   "admin",
 ];
 
+const ROLE_LABELS = {
+  student: "Student",
+  instructor: "Instructor",
+  studio_owner: "Studio owner",
+  admin: "Admin",
+};
+
+const ROLE_GROUPS = [
+  { role: "studio_owner", label: "Studio owners" },
+  { role: "instructor", label: "Instructors" },
+  { role: "student", label: "Students" },
+  { role: "admin", label: "Admins" },
+  { role: null, label: "No role" },
+] as const;
+
 export default function DashboardAdminPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [tab, setTab] = useState<"studios" | "users">("studios");
@@ -176,6 +191,7 @@ function UsersPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -206,6 +222,7 @@ function UsersPanel() {
     try {
       const updated = await setUserRole(id, role);
       setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+      setExpanded((prev) => [...new Set([...prev, updated.role ?? "unassigned"])]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update role");
     } finally {
@@ -218,7 +235,7 @@ function UsersPanel() {
       <div className="mb-6">
         <h2 className={`text-xl font-bold ${t.textPrimary}`}>Users</h2>
         <p className={`text-sm ${t.textMuted} mt-0.5`}>
-          Find a user by email, name, or phone and set their role.
+          Expand a role to manage users, or search across all roles.
         </p>
       </div>
 
@@ -227,7 +244,12 @@ function UsersPanel() {
         aria-label="Search users"
         placeholder="Search by email, name, or phone…"
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setExpanded(e.target.value.trim()
+            ? ROLE_GROUPS.map((group) => group.role ?? "unassigned")
+            : []);
+        }}
         className={`h-10 ${t.inputField} px-3 text-sm mb-4 w-full max-w-sm`}
       />
 
@@ -242,45 +264,84 @@ function UsersPanel() {
             />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
-        <p className={`text-sm ${t.textMuted}`}>No users match.</p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {filtered.map((u) => (
-            <div key={u.id} className="surface-card user-row">
-              <div className="min-w-0 flex-1">
-                <p className={`text-sm font-medium ${t.textPrimary} truncate`}>
-                  {u.name || "(no name)"}
-                </p>
-                <p className={`text-xs ${t.textMuted} truncate`}>
-                  {u.email ?? u.phone}
-                </p>
-              </div>
-              <select
-                aria-label={`Role for ${u.name || u.email || u.phone}`}
-                value={u.role ?? ""}
-                onChange={(e) =>
-                  handleRoleChange(
-                    u.id,
-                    e.target.value as NonNullable<User["role"]>,
-                  )
-                }
-                disabled={savingId === u.id}
-                className={`h-9 ${t.inputField} px-2 text-sm shrink-0`}
-              >
-                {!u.role && (
-                  <option value="" disabled>
-                    No role
-                  </option>
-                )}
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
+        <div className="flex flex-col gap-3">
+          {filtered.length === 0 && (
+            <p className={`text-sm ${t.textMuted}`} role="status">
+              {search.trim() ? "No users match." : "No users yet."}
+            </p>
+          )}
+          {ROLE_GROUPS.map((group) => {
+            const key = group.role ?? "unassigned";
+            const members = filtered.filter((u) => u.role === group.role);
+            const total = users.filter((u) => u.role === group.role).length;
+            const isExpanded = expanded.includes(key);
+            return (
+              <section key={key} className="surface-card overflow-hidden">
+                <h3>
+                  <button
+                    type="button"
+                    aria-expanded={isExpanded}
+                    aria-controls={`users-${key}`}
+                    onClick={() => setExpanded((prev) => isExpanded
+                      ? prev.filter((role) => role !== key)
+                      : [...prev, key])}
+                    className={`flex w-full items-center gap-3 p-4 text-left ${t.textPrimary} focus-visible:outline-2 focus-visible:outline-offset-[-4px]`}
+                  >
+                    <span className="flex-1 font-semibold">{group.label}</span>
+                    <span className={`text-sm ${t.textMuted}`}>
+                      {search.trim() ? `${members.length} of ${total}` : total}
+                    </span>
+                    <span aria-hidden="true">{isExpanded ? "−" : "+"}</span>
+                  </button>
+                </h3>
+                <div id={`users-${key}`} hidden={!isExpanded} className="px-4 pb-4">
+                  {members.length === 0 && (
+                    <p className={`text-sm ${t.textMuted}`}>
+                      {search.trim() ? "No matching users in this role." : "No users in this role yet."}
+                    </p>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    {members.map((u) => (
+                      <div key={u.id} className="surface-card user-row">
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-medium ${t.textPrimary} truncate`}>
+                            {u.name || "(no name)"}
+                          </p>
+                          <p className={`text-xs ${t.textMuted} truncate`}>
+                            {u.email ?? u.phone}
+                          </p>
+                        </div>
+                        <select
+                          aria-label={`Role for ${u.name || u.email || u.phone}`}
+                          value={u.role ?? ""}
+                          onChange={(e) =>
+                            handleRoleChange(
+                              u.id,
+                              e.target.value as NonNullable<User["role"]>,
+                            )
+                          }
+                          disabled={savingId === u.id}
+                          className={`h-9 ${t.inputField} px-2 text-sm shrink-0`}
+                        >
+                          {!u.role && (
+                            <option value="" disabled>
+                              No role
+                            </option>
+                          )}
+                          {ROLE_OPTIONS.map((r) => (
+                            <option key={r} value={r}>
+                              {ROLE_LABELS[r]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

@@ -109,8 +109,13 @@ async function setup(page: Page, role: string) {
       body = { ...studio, ...request.postDataJSON() };
     else if (path === "/admin/users")
       body = {
-        data: [{ ...user, id: "member-1", name: "Jamie Lee", role: "student" }],
-        total: 1,
+        data: [
+          { ...user, id: "member-1", name: "Jamie Lee", role: "student" },
+          { ...user, id: "owner-1", name: "Sam Owner", role: "studio_owner", email: "sam@example.test" },
+          { ...user, id: "new-1", name: "New Member", role: null },
+          user,
+        ],
+        total: 4,
       };
     else if (path === "/admin/users/member-1/role")
       body = {
@@ -280,9 +285,26 @@ test("admin reviews listings and changes a role within the shared workspace", as
       ?.body,
   ).toEqual({ approvalStatus: "approved" });
   await page.getByRole("button", { name: "Users", exact: true }).click();
-  await page.getByLabel("Search users").fill("Jamie");
+  const students = page.getByRole("button", { name: "Students 1", exact: true });
+  await expect(students).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByLabel("Role for Jamie Lee")).toBeHidden();
+  await students.click();
+  await expect(page.getByLabel("Role for Jamie Lee")).toBeVisible();
+  await students.click();
+  await page.getByRole("button", { name: "No role 1", exact: true }).click();
+  await expect(page.getByLabel("Role for New Member")).toHaveValue("");
+  await page.getByLabel("Search users").fill("SAM@EXAMPLE");
+  await expect(page.getByLabel("Role for Sam Owner")).toBeVisible();
+  await expect(page.getByLabel("Role for Jamie Lee")).toHaveCount(0);
+  await page.getByLabel("Search users").fill("not-a-user");
+  await expect(page.getByText("No users match.", { exact: true })).toBeVisible();
+  await page.getByLabel("Search users").fill("  jAmIe  ");
   await page.getByLabel("Role for Jamie Lee").selectOption("instructor");
-  await expect(page.getByLabel("Role for Jamie Lee")).toHaveValue("instructor");
+  await expect(page.locator("#users-instructor").getByLabel("Role for Jamie Lee")).toHaveValue("instructor");
+  await expect(page.getByRole("button", { name: "Students 0 of 0", exact: true })).toBeVisible();
+  await page.getByLabel("Search users").fill("");
+  await expect(page.getByRole("button", { name: "Instructors 1", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: "Instructors 1", exact: true }).click();
   expect(
     api.requests.find((r) => r.path === "/admin/users/member-1/role")?.body,
   ).toEqual({ role: "instructor" });
@@ -313,4 +335,20 @@ test("student cannot load owner or admin data through a direct dashboard URL", a
   expect(api.unexpected).toEqual([]);
   expect(api.requests).toEqual([]);
   expect(api.reads.filter((path) => path !== "/auth/me")).toEqual([]);
+});
+
+test("failed admin role change keeps the user in their original section", async ({ page }) => {
+  await setup(page, "admin");
+  await page.route("**/admin/users/member-1/role", (route) => route.fulfill({
+    status: 500,
+    contentType: "application/json",
+    body: JSON.stringify({ message: "Role update unavailable" }),
+  }));
+  await page.goto("/dashboard/admin");
+  await page.getByRole("button", { name: "Users", exact: true }).click();
+  await page.getByRole("button", { name: "Students 1", exact: true }).click();
+  await page.getByLabel("Role for Jamie Lee").selectOption("instructor");
+  await expect(page.getByText("Role update unavailable", { exact: true })).toBeVisible();
+  await expect(page.locator("#users-student").getByLabel("Role for Jamie Lee")).toHaveValue("student");
+  await expect(page.getByLabel("Role for Jamie Lee")).toBeEnabled();
 });
