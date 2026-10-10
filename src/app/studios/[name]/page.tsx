@@ -62,6 +62,12 @@ function StudioDetail() {
                     "Explore the available times and amenities to plan your next session."}
                 </p>
               </section>
+              <section className="detail-section" aria-labelledby="studio-location">
+                <h2 id="studio-location">Location</h2>
+                <p className="break-words">
+                  {studio.location?.trim() || "Location not provided yet."}
+                </p>
+              </section>
               {studio.amenities.length > 0 && (
                 <section className="detail-section">
                   <h2>What’s in the space</h2>
