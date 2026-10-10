@@ -62,6 +62,25 @@ function StudioDetail() {
                     "Explore the available times and amenities to plan your next session."}
                 </p>
               </section>
+              <section className="detail-section" aria-labelledby="studio-location">
+                <h2 id="studio-location">Location</h2>
+                <span className="text-sm text-stone-400">Area and city</span>
+                <p className="break-words">
+                  {studio.location?.trim() || "Location not provided yet."}
+                </p>
+                {studio.location?.trim() && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${studio.name}, ${studio.location.trim()}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex min-h-11 items-center gap-2 text-brand-soft underline underline-offset-4"
+                  >
+                    Open in Google Maps
+                    <span aria-hidden="true">↗</span>
+                    <span className="sr-only"> (opens in a new tab)</span>
+                  </a>
+                )}
+              </section>
               {studio.amenities.length > 0 && (
                 <section className="detail-section">
                   <h2>What’s in the space</h2>
