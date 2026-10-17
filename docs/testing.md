@@ -4,7 +4,7 @@ Changes go through PRs. No coverage quota substitutes for a failing regression o
 
 | Layer | Trigger | What it proves |
 | --- | --- | --- |
-| `Lint, Typecheck & Build` | Every PR/push to main | Build/static checks and 40 desktop/mobile fixture tests, including errors, auth callbacks, workspace navigation and permissions |
+| `Lint, Typecheck & Build` | Every PR/push to main | Build/static checks and desktop/mobile fixture journeys plus pure booking-rule tests, including errors, auth callbacks, workspace navigation and permissions |
 | `Full stack integration` | Every PR/push to main; nightly 00:30 UTC; manual | Real browser → Nest → PostgreSQL/Redis with disposable services, using the current repo revision and companion main |
 | `Nightly Smoke` | Nightly 01:15 UTC; successful Vercel status for current main; manual | Read-only production discovery, search, availability, custom duration/price, sign-in handoff and anonymous workspace guards on desktop/mobile |
 
@@ -39,3 +39,23 @@ Require `Lint, Typecheck & Build` and `Full stack integration` before merging fr
 Before public launch, verify real Google sign-in on the registered origin and OTP delivery with a designated test phone. The production Railway service inspected September 29 has no MSG91 credential names configured. Provider tests need those settings and a test identity; fixture callbacks cannot certify delivery. Also verify notification delivery, backup restore and incident alert recipients. Customer cancellation is API-only and cancellation deadlines/payments remain product follow-ups, not smoke-test guarantees.
 
 A release normally needs green automated checks and targeted review of changed UX. Provider/auth configuration changes and new critical journeys still need explicit verification.
+
+## Test ownership and cleanup
+
+- `booking-rules.spec.ts` runs once in the `rules` project. It exercises pure price, duration, interval and safe-return rules; repeating it per browser device adds no browser evidence.
+- Studio/workspace journeys run on desktop IST and mobile America/New_York. Retain both because layout and timezone regressions differ.
+- `session.spec.ts` requires a real 401 before accepting a refresh. It checks a usable renewed session, rejected refresh, and a rejected retry with bounded attempts and cleared storage.
+- Full-stack journeys prove persistence and cross-role behavior; fixtures deliberately cover failures and browser interactions that are expensive to reproduce in each integration run.
+- Test counts are runner output, not a quality target. Remove a case only when its behavior is obsolete or another case demonstrably protects the same failure.
+
+## Local stabilization validation — 2026-10-17
+
+- Both repositories: lint (backend retains 16 existing warnings), TypeScript and production compilation passed.
+- Backend: 154 HTTP tests passed against a newly initialized disposable PostgreSQL/Redis pair.
+- Frontend: 44 checks passed (four pure rule checks once, 40 browser cases across desktop/mobile).
+- All three existing browser → real backend role journeys passed against both changed checkouts.
+- The rejected post-refresh retry failed on desktop and mobile before session cleanup was fixed; both now pass.
+- Removing Helmet temporarily from the shared server configuration caused the security regression to fail; restoring it passed all seven security checks.
+- Corrected backend `start:prod` was used to serve the integration API successfully.
+
+Local versions were Node 26.5.1, PostgreSQL 18.4 and Redis 8.10.0. CI remains the compatibility check for Node 22/PostgreSQL 16/Redis 7. No production/provider verification was performed. Jest still uses `--forceExit`; provider delivery, notification lifecycle wiring and the other documented launch follow-ups remain open.

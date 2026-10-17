@@ -50,7 +50,7 @@ NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
 - For the macOS full-stack launcher, check out the repos as siblings, prepare both env files and databases, install dependencies in both, then run `npm run dev:local` from `../OQupy_srv/oqupy-srv`. `OQUPY_WEB_DIR` overrides the frontend path.
 - The launcher requires Homebrew and starts PostgreSQL 16/Redis; it does not install packages or initialize/migrate the database. It is not portable to an Ubuntu cloud container unchanged.
 - `/api/dev/otp` invokes `redis-cli`, needs server-only `REDIS_URL`, and returns 404 outside `NODE_ENV=development`. Keep it confined to trusted local development and never connect it to production Redis.
-- The backend README's promise of role login tokens from its seed script is stale; inspect that script before relying on it.
+- The backend seed script creates sample data, not role login tokens; use the isolated browser fixture for test sessions.
 - No `.env.example` is currently committed here. Do not assume a developer's ignored env files are available in CI/cloud.
 
 ## Build, validation and configuration boundaries

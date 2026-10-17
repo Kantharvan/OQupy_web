@@ -13,12 +13,15 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
+    { name: "rules", testMatch: "booking-rules.spec.ts" },
     {
       name: "desktop",
+      testIgnore: "booking-rules.spec.ts",
       use: { ...devices["Desktop Chrome"], timezoneId: "Asia/Kolkata" },
     },
     {
       name: "mobile",
+      testIgnore: "booking-rules.spec.ts",
       use: {
         ...devices["iPhone 13"],
         defaultBrowserType: "chromium",

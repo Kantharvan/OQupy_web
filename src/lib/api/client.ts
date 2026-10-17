@@ -79,10 +79,9 @@ export async function apiRequest<T>(
 
   if (
     res.status === 401 &&
-    retry &&
     !["/auth/verify-otp", "/auth/send-otp", "/auth/google"].includes(path)
   ) {
-    const refreshed = await refreshTokens();
+    const refreshed = retry && (await refreshTokens());
     if (refreshed) return apiRequest<T>(path, options, false);
     clearTokens();
     if (typeof window !== "undefined") {
