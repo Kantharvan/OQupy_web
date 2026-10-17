@@ -58,7 +58,7 @@ Playwright starts the production test build at `http://127.0.0.1:3100` and inter
 
 GitHub CI runs lint, typecheck, build and browser tests under `Lint, Typecheck & Build`. The separate nightly smoke workflow reads live production pages and availability. Vercel deployment configuration and branch protection are external settings; check [CONTRIBUTING.md](CONTRIBUTING.md) for their verification boundaries.
 
-A separate [real-backend mobile booking test](integration/README.md) verifies request, approval and cancellation against disposable local services. It is opt-in and is not yet part of the regular CI job.
+The separate [full-stack integration suite](integration/README.md) runs in CI on PRs, main pushes, nightly and manual dispatch. It verifies booking/approval/cancellation, public classes/enrollment, and owner/admin listing and availability journeys against disposable services. Companion repository read access is required.
 
 ## Repository map
 

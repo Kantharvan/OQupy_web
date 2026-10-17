@@ -1,6 +1,6 @@
 # Oqupy web — Current user flows
 
-This describes the implemented frontend as of PR #14, replacing the original phase plan. Source and tests define actual behavior; API contracts live in the separate backend/shared-contract repositories. Setup and test commands are in the [README](../README.md).
+This describes the current implemented frontend; historical review records remain under `docs/review/`. Source and tests define actual behavior; API contracts live in the separate backend/shared-contract repositories. Setup and test commands are in the [README](../README.md).
 
 ## Routes
 
@@ -30,7 +30,7 @@ Dashboard layout waits for auth, redirects guests to login and users without a r
 5. Signed-in users enter a session name. Instructors can request a public instructor event; studio owners are directed to their workspace rather than the public booking form.
 6. Submitting creates a request awaiting approval. The confirmation links to `/dashboard/bookings`. No payment is collected. Conflicts clear the selected time and reload availability.
 
-The displayed estimate comes from the parsed hourly studio rate multiplied by duration. Invalid/zero rates block requests. Server-authoritative pricing remains a follow-up; client estimates are not a security boundary.
+The displayed estimate comes from the parsed hourly studio rate multiplied by duration. Invalid/zero rates block requests. The backend recalculates the amount from the stored studio rate and duration, ignoring client totals and payment states. Schedule edits reprice; metadata-only edits preserve the quote.
 
 Upcoming public instructor classes are shown to students when applicable, with enrollment actions. Do not assume class enrollment and personal studio requests are the same booking-history contract.
 
@@ -59,4 +59,4 @@ All pages share the public header, dark theme and role-aware navigation. Desktop
 
 Playwright protects booking calculations, full-duration availability, auth handoff, workspace mutations/failures, role navigation and viewport layout using API fixtures. Desktop runs in IST; mobile Chromium runs in America/New_York. There is no coverage-percentage gate or installed Vitest/MSW test stack.
 
-Real-backend integration, production authenticated flows and Google OAuth require separate checks. See [remaining work](progress.md) and [review evidence](review/unified-app/README.md).
+The separate full-stack CI suite exercises real-backend role journeys against disposable services. Real Google/SMS and production authenticated walkthroughs still require separate verification. See [remaining work](progress.md) and [review evidence](review/unified-app/README.md).
