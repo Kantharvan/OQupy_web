@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getPublicClasses, type PublicClass } from "@/lib/api/bookings";
-import { enroll } from "@/lib/api/enrollments";
+import { enroll, getStudentEnrollments } from "@/lib/api/enrollments";
+import { useAuth } from "@/context/AuthContext";
 import { formatSessionDate, durationLabel } from "@/lib/booking/availability";
 import { t } from "@/styles/tokens";
 export function PublicEventsSection({ studioId }: { studioId: string }) {
+  const { user } = useAuth();
   const [events, setEvents] = useState<PublicClass[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
@@ -12,29 +14,38 @@ export function PublicEventsSection({ studioId }: { studioId: string }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    getPublicClasses(studioId)
-      .then((res) => {
-        const upcoming = res.data.filter(
-          (b) =>
-            b.bookingType === "instructor_event" &&
-            b.isPublic &&
-            b.status === "Confirmed" &&
-            new Date(b.dateTime) > new Date(),
-        );
-        setEvents(
-          upcoming.sort(
-            (a, b) =>
-              new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime(),
-          ),
-        );
-      })
-      .catch(() =>
-        setErrors({
-          load: "Classes could not be loaded. Please refresh to try again.",
-        }),
-      )
-      .finally(() => setIsLoading(false));
-  }, [studioId]);
+    if (!user) return;
+    const studentId = user.id;
+    let active = true;
+    async function load() {
+      try {
+        const classes = await getPublicClasses(studioId);
+        const ids = new Set<string>();
+        let page = 1;
+        let fetched = 0;
+        // Enrollment history is paginated independently of the public class list.
+        while (active) {
+          const result = await getStudentEnrollments(studentId, page, 100);
+          result.data.forEach((enrollment) => ids.add(enrollment.bookingId));
+          fetched += result.data.length;
+          if (!result.data.length || fetched >= result.total) break;
+          page++;
+        }
+        if (!active) return;
+        setEnrolledIds(ids);
+        setEvents(classes.data.filter((b) =>
+          b.bookingType === "instructor_event" && b.isPublic &&
+          b.status === "Confirmed" && new Date(b.dateTime) > new Date(),
+        ).sort((a, b) => Date.parse(a.dateTime) - Date.parse(b.dateTime)));
+      } catch {
+        if (active) setErrors({ load: "Classes or enrollment status could not be loaded. Please refresh to try again." });
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+    void load();
+    return () => { active = false; };
+  }, [studioId, user]);
 
   async function handleEnroll(bookingId: string) {
     setEnrollingId(bookingId);

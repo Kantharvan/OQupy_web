@@ -57,6 +57,8 @@ async function mockAPI(
         operationalHours: { open: "09:00", close: "13:00" },
         busy: [],
       };
+    else if (path.startsWith("/enrollments/student/"))
+      body = { data: [], total: 0, page: 1, limit: 100 };
     else if (path === "/auth/me") body = user;
     else if (path === "/auth/send-otp") {
       otpRequests.push(route.request().postDataJSON());
@@ -484,5 +486,29 @@ test("students load public classes without owner access and can retry enrollment
     { bookingId: "class-1" },
     { bookingId: "class-1" },
   ]);
+  // An existing enrollment may be beyond the first page of history.
+  const historyPages: number[] = [];
+  await page.route("**/enrollments/student/user-1?*", (route) => {
+    const pageNumber = Number(new URL(route.request().url()).searchParams.get("page"));
+    historyPages.push(pageNumber);
+    return route.fulfill({ json: {
+      data: pageNumber === 1
+        ? Array.from({ length: 100 }, (_, i) => ({ id: `old-${i}`, bookingId: `old-${i}`, studentId: user.id }))
+        : [{ id: "enrollment-1", bookingId: "class-1", studentId: user.id }],
+      total: 101, page: pageNumber, limit: 100,
+    } });
+  });
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Enrolled ✓", exact: true })).toBeDisabled();
+  expect(historyPages).toEqual([1, 2]);
+  expect(enrollments).toHaveLength(2);
+
+  await page.route("**/enrollments/student/user-1?*", (route) =>
+    route.fulfill({ status: 503, json: { message: "History unavailable" } }),
+  );
+  await page.reload();
+  await expect(page.getByRole("alert").filter({ hasText: "Classes or enrollment status" })).toHaveText(/enrollment status could not be loaded/);
+  await expect(page.getByRole("button", { name: "Enroll", exact: true })).toHaveCount(0);
+
   expect(api.unexpected).toEqual([]);
 });

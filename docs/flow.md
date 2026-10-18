@@ -32,7 +32,7 @@ Dashboard layout waits for auth, redirects guests to login and users without a r
 
 The displayed estimate comes from the parsed hourly studio rate multiplied by duration. Invalid/zero rates block requests. The backend recalculates the amount from the stored studio rate and duration, ignoring client totals and payment states. Schedule edits reprice; metadata-only edits preserve the quote.
 
-Upcoming public instructor classes are shown to students when applicable, with enrollment actions. Do not assume class enrollment and personal studio requests are the same booking-history contract.
+Upcoming public instructor classes are shown to students when applicable, with enrollment actions. The page restores enrolled status from all pages of the student’s enrollment history, including after reload. If history cannot load, it shows an error instead of offering an uncertain enrollment action. Do not assume class enrollment and personal studio requests are the same booking-history contract.
 
 ## Authentication and session lifecycle
 

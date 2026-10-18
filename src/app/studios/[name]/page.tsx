@@ -121,7 +121,7 @@ function StudioDetail() {
                 </p>
               </section>
               {user?.role === "student" && (
-                <PublicEventsSection studioId={studio.id} />
+                <PublicEventsSection key={`${studio.id}:${user.id}`} studioId={studio.id} />
               )}
             </article>
             <BookingPanel key={studio.id} studio={studio} />
