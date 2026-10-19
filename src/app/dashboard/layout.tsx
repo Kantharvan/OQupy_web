@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/ui/site-header";
 const common = [
   { href: "/dashboard", label: "Overview", icon: "◫" },
   { href: "/dashboard/bookings", label: "Bookings", icon: "▤" },
+  { href: "/dashboard/managed", label: "Managed studios", icon: "⌂" },
   { href: "/dashboard/profile", label: "Profile", icon: "◎" },
 ];
 export default function DashboardLayout({

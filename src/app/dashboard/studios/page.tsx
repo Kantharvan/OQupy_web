@@ -1,5 +1,6 @@
 "use client";
 
+import { StudioManagers } from "@/components/dashboard/studio-managers";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -364,6 +365,7 @@ function StudioPanel({
   onUpdated: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [managersOpen, setManagersOpen] = useState(false);
   const [editing, setEditing] = useState(false);
 
   if (editing) {
@@ -422,6 +424,7 @@ function StudioPanel({
           <strong className="text-brand">{priceLabel(studio.price)}</strong>
         </div>
         <div className="action-row">
+          <button className="button-secondary" aria-expanded={managersOpen} onClick={() => setManagersOpen((v) => !v)}>{managersOpen ? "Hide managers" : "Manage managers"}</button>
           <button className="button-secondary" onClick={() => setEditing(true)}>
             Edit studio
           </button>
@@ -434,6 +437,7 @@ function StudioPanel({
           </button>
         </div>
       </div>
+      {managersOpen && <StudioManagers studioId={studio.id} />}
       {/* Blockouts section */}
       {expanded && (
         <div className="border-t border-border px-4 pb-4 pt-4">

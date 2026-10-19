@@ -3,7 +3,13 @@ import { readFileSync } from "node:fs";
 const fixture = JSON.parse(
   readFileSync(process.env.OQUPY_INTEGRATION_FIXTURE!, "utf8"),
 ) as {
-  users: { id: string; refresh: string; role: string; purpose: string }[];
+  users: {
+    id: string;
+    refresh: string;
+    role: string;
+    email: string;
+    purpose: string;
+  }[];
   studio: { id: string; name: string };
   date: string;
 };
@@ -233,5 +239,100 @@ test("owner creates a private pending listing, admin publishes it, hours and blo
   } finally {
     await owner.context.close();
     await admin.context.close();
+  }
+});
+
+test("owner delegates studio operations and revokes manager access without changing account role", async ({
+  browser,
+  request,
+}) => {
+  const owner = await account(browser, "studio_owner");
+  const manager = await account(browser, "instructor");
+  const student = fixture.users.find((u) => u.purpose === "student")!;
+  try {
+    const login = await request.post(`${api}/auth/refresh`, {
+      data: { refreshToken: student.refresh },
+    });
+    expect(login.ok()).toBe(true);
+    const token = (await login.json()).accessToken;
+    const date = new Date(`${fixture.date}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + 1);
+    const created = await request.post(`${api}/bookings`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        studioId: fixture.studio.id,
+        eventName: "Manager approval journey",
+        dateTime: `${date.toISOString().slice(0, 10)}T12:30:00Z`,
+        durationHours: 1,
+        bookingType: "student_practice",
+        isPublic: false,
+      },
+    });
+    expect(created.ok()).toBe(true);
+    const bookingId = (await created.json()).id;
+    await owner.page.goto("/dashboard/studios");
+    await owner.page
+      .getByRole("button", { name: "Manage managers", exact: true })
+      .click();
+    await owner.page.getByLabel("Manager email").fill(manager.user.email);
+    await owner.page
+      .getByRole("button", { name: "Assign manager", exact: true })
+      .click();
+    await expect(
+      owner.page.getByText(manager.user.email, { exact: false }),
+    ).toBeVisible();
+    await manager.page.goto("/dashboard/managed");
+    const card = manager.page
+      .locator("article")
+      .filter({
+        has: manager.page.getByRole("heading", {
+          name: "Manager approval journey",
+        }),
+      });
+    await card.getByRole("button", { name: "Approve", exact: true }).click();
+    await expect(card.getByText("Confirmed", { exact: true })).toBeVisible();
+    const saved = await request.get(`${api}/bookings/${bookingId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect((await saved.json()).status).toBe("Confirmed");
+    await manager.page
+      .getByRole("button", { name: "Add unavailable time" })
+      .click();
+    await manager.page
+      .getByLabel("Reason", { exact: true })
+      .fill("Manager maintenance");
+    await manager.page
+      .getByLabel("Blockout date")
+      .fill(date.toISOString().slice(0, 10));
+    await manager.page
+      .getByRole("button", { name: "Save Blockout", exact: true })
+      .click();
+    await expect(
+      manager.page.getByText("Manager maintenance", { exact: true }),
+    ).toBeVisible();
+    await owner.page
+      .getByRole("button", { name: /^Remove Browser fixture/ })
+      .click();
+    await expect(owner.page.getByText("No managers assigned.")).toBeVisible();
+    await manager.page.reload();
+    await expect(manager.page.getByText(/No studios assigned/)).toBeVisible();
+    const managerLogin = await request.post(`${api}/auth/refresh`, {
+      data: { refreshToken: manager.user.refresh },
+    });
+    const managerToken = (await managerLogin.json()).accessToken;
+    expect(
+      (
+        await request.get(`${api}/bookings/studio/${fixture.studio.id}`, {
+          headers: { Authorization: `Bearer ${managerToken}` },
+        })
+      ).status(),
+    ).toBe(403);
+    const me = await request.get(`${api}/auth/me`, {
+      headers: { Authorization: `Bearer ${managerToken}` },
+    });
+    expect((await me.json()).role).toBe("instructor");
+  } finally {
+    await owner.context.close();
+    await manager.context.close();
   }
 });

@@ -392,3 +392,136 @@ test("owner can see and manage both studios without changing the first", async (
   await expect(page.getByRole("heading", { name: "Practice Room", exact: true })).toBeVisible();
   expect(api.unexpected).toEqual([]);
 });
+
+test("owner assigns and removes a manager only for the chosen studio", async ({
+  page,
+}) => {
+  await setup(page, "studio_owner");
+  let assigned = false;
+  const writes: string[] = [];
+  await page.route("**/studio-management/studio-1/managers", (route) => {
+    if (route.request().method() === "POST") {
+      expect(route.request().postDataJSON()).toEqual({
+        email: "manager@example.test",
+      });
+      assigned = true;
+      writes.push("assign");
+    }
+    return route.fulfill({
+      json: assigned
+        ? [
+            {
+              userId: "manager-1",
+              user: {
+                id: "manager-1",
+                name: "Studio helper",
+                email: "manager@example.test",
+              },
+            },
+          ]
+        : [],
+    });
+  });
+  await page.route(
+    "**/studio-management/studio-1/managers/manager-1",
+    (route) => {
+      expect(route.request().method()).toBe("DELETE");
+      assigned = false;
+      writes.push("remove");
+      return route.fulfill({ json: { success: true } });
+    },
+  );
+  await page.route("**/studio-management/studio-1/activity?*", (route) =>
+    route.fulfill({ json: { data: [], total: 0 } }),
+  );
+  await page.goto("/dashboard/studios");
+  await page
+    .getByRole("button", { name: "Manage managers", exact: true })
+    .click();
+  await expect(page.getByText("No managers assigned.")).toBeVisible();
+  await page.getByLabel("Manager email").fill("manager@example.test");
+  await page
+    .getByRole("button", { name: "Assign manager", exact: true })
+    .click();
+  await expect(
+    page.getByText("Studio helper · manager@example.test"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Remove Studio helper" }).click();
+  await expect(page.getByText("No managers assigned.")).toBeVisible();
+  expect(writes).toEqual(["assign", "remove"]);
+  await withinViewport(page);
+});
+
+test("manager reviews assigned requests and availability without owner controls", async ({
+  page,
+}) => {
+  const api = await setup(page, "student");
+  let current = { ...booking };
+  await page.route("**/studio-management/assigned?*", (route) =>
+    route.fulfill({ json: { data: [studio], total: 1 } }),
+  );
+  await page.route("**/bookings/studio/studio-1?*", (route) =>
+    route.fulfill({ json: { data: [current], total: 1 } }),
+  );
+  await page.route("**/bookings/booking-1/confirm", (route) => {
+    current = { ...current, status: "Confirmed" };
+    return route.fulfill({ json: current });
+  });
+  await page.goto("/dashboard/managed");
+  await expect(
+    page.getByRole("heading", { name: "Evening rehearsal" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Manage managers" }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit studio" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page
+      .getByRole("navigation", { name: "Workspace navigation" })
+      .getByRole("link", { name: "My studios", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.getByText("Confirmed", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Reject", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Cancel", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Add unavailable time" }),
+  ).toBeVisible();
+  await withinViewport(page);
+  await page.route("**/studio-management/assigned?*", (route) =>
+    route.fulfill({ json: { data: [], total: 0 } }),
+  );
+  await page.reload();
+  await expect(page.getByText(/No studios assigned/)).toBeVisible();
+  expect(api.unexpected).toEqual([]);
+});
+
+test("failed manager decision stays retryable and does not mark a request confirmed", async ({
+  page,
+}) => {
+  await setup(page, "student");
+  await page.route("**/studio-management/assigned?*", (route) =>
+    route.fulfill({ json: { data: [studio], total: 1 } }),
+  );
+  await page.route("**/bookings/booking-1/confirm", (route) =>
+    route.fulfill({
+      status: 403,
+      json: { message: "Studio access was removed" },
+    }),
+  );
+  await page.goto("/dashboard/managed");
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.getByText("Studio access was removed")).toBeVisible();
+  await expect(
+    page.getByText("Awaiting approval", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Approve", exact: true }),
+  ).toBeEnabled();
+});
