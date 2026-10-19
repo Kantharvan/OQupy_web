@@ -56,8 +56,7 @@ export default function DashboardStudiosPage() {
     load();
   }, [load]);
 
-  // One studio per owner for now.
-  const studio = studios[0];
+  const hasStudios = studios.length > 0;
 
   return (
     <div>
@@ -67,7 +66,7 @@ export default function DashboardStudiosPage() {
         description="Shape your listing, set your hours and welcome your next guests."
         action={
           !isLoading &&
-          !studio && (
+          !hasStudios && (
             <button
               type="button"
               className="button-primary"
@@ -78,7 +77,7 @@ export default function DashboardStudiosPage() {
           )
         }
       />
-      {showForm && !studio && (
+      {showForm && !hasStudios && (
         <StudioForm
           onSaved={() => {
             setShowForm(false);
@@ -91,7 +90,7 @@ export default function DashboardStudiosPage() {
 
       {isLoading ? (
         <div className={`${t.cardBox} h-32 animate-pulse`} />
-      ) : !studio ? (
+      ) : !hasStudios ? (
         <div className={`${t.cardBox} p-10 text-center`}>
           <div className="w-16 h-16 rounded-xl bg-bg-input mx-auto mb-3" />
           <p className={`${t.textPrimary} font-semibold mb-1`}>No studio yet</p>
@@ -100,7 +99,11 @@ export default function DashboardStudiosPage() {
           </p>
         </div>
       ) : (
-        <StudioPanel studio={studio} onUpdated={load} />
+        <div className="flex flex-col gap-6">
+          {studios.map((studio) => (
+            <StudioPanel key={studio.id} studio={studio} onUpdated={load} />
+          ))}
+        </div>
       )}
     </div>
   );

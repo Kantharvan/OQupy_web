@@ -51,7 +51,7 @@ All pages share the public header, dark theme and role-aware navigation. Desktop
 - Overview shows booking summaries and relevant links; confirmed booking value is not revenue.
 - Bookings provide status filtering and permitted confirmation/cancellation actions. Failed approval remains visible and retryable.
 - Profile saves the display name and updates auth context.
-- Studio management edits listing fields and opening/closing times with explicit hour/minute/AM-PM controls. API hours remain `HH:mm`.
+- Studio management shows each returned owner studio with independent edit and availability controls. It edits listing fields and opening/closing times with explicit hour/minute/AM-PM controls. API hours remain `HH:mm`.
 - Availability supports timed/all-day and recurring blockouts. Timed inputs convert IST to ISO timestamps; all-day and recurrence-date semantics retain the existing contract.
 - Admin reviews pending studios and changes user roles.
 
