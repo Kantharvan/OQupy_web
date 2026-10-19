@@ -60,3 +60,7 @@ All pages share the public header, dark theme and role-aware navigation. Desktop
 Playwright protects booking calculations, full-duration availability, auth handoff, workspace mutations/failures, role navigation and viewport layout using API fixtures. Desktop runs in IST; mobile Chromium runs in America/New_York. There is no coverage-percentage gate or installed Vitest/MSW test stack.
 
 The separate full-stack CI suite exercises real-backend role journeys against disposable services. Real Google/SMS and production authenticated walkthroughs still require separate verification. See [remaining work](progress.md) and [review evidence](review/unified-app/README.md).
+
+## Delegated studio management
+
+[Studio managers](studio-managers.md) use `/dashboard/managed` to operate assigned studios while retaining their personal account role. Owners assign/remove managers from My studios. Manager booking decisions and availability use the existing API endpoints with studio-scoped authorization; listing and access controls stay owner-only.

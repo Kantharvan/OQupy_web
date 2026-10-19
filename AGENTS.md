@@ -88,3 +88,7 @@ results and known limitations in every PR.
 ## Automated release verification
 
 Read `docs/testing.md` for the real cross-repository CI, read-only production browser smoke, credential scope, merge gates and provider limitations. Never deploy integration/test builds or run mutating suites against hosted data.
+
+## Studio managers
+
+See [manager workflows](docs/studio-managers.md). Manager access is per-studio membership, not a new `User.role`. Keep `/dashboard/managed` separate from personal bookings and owner listing controls. The backend must deploy its additive migration and manager endpoints before this UI; do not weaken API permissions to match UI visibility.
