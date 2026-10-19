@@ -352,3 +352,43 @@ test("failed admin role change keeps the user in their original section", async 
   await expect(page.locator("#users-student").getByLabel("Role for Jamie Lee")).toHaveValue("student");
   await expect(page.getByLabel("Role for Jamie Lee")).toBeEnabled();
 });
+
+test("owner can see and manage both studios without changing the first", async ({ page }) => {
+  const api = await setup(page, "studio_owner");
+  let second = { ...studio, id: "studio-2", name: "Yoga Room", location: "Koramangala" };
+  const edits: { path: string; body: Record<string, unknown> }[] = [];
+  await page.route("**/studios/owner/user-1?*", (route) => route.fulfill({ json: { data: [studio, second], total: 2 } }));
+  await page.route("**/bookings/studio/studio-2?*", (route) => route.fulfill({ json: { data: [], total: 0 } }));
+  await page.route("**/studios/by-name/Yoga%20Room", (route) => {
+    edits.push({ path: new URL(route.request().url()).pathname, body: route.request().postDataJSON() });
+    second = { ...second, ...route.request().postDataJSON() };
+    return route.fulfill({ json: second });
+  });
+  let availabilityReads = 0;
+  await page.route("**/blockouts/studio/studio-2?*", (route) => {
+    availabilityReads++;
+    return route.fulfill({ json: { data: [], total: 0 } });
+  });
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Yoga Room", exact: true })).toBeVisible();
+  await page.getByRole("navigation", { name: "Workspace navigation" }).getByRole("link", { name: "My studios" }).click();
+  await expect(page.getByRole("heading", { name: "Practice Room", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Yoga Room", exact: true })).toBeVisible();
+  const secondPanel = page.locator(".managed-studio").filter({ has: page.getByRole("heading", { name: "Yoga Room", exact: true }) });
+  await secondPanel.getByRole("button", { name: "Edit studio", exact: true }).click();
+  await page.getByLabel("Location", { exact: true }).fill("Koramangala, Bangalore");
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
+  await expect(secondPanel.getByText("Koramangala, Bangalore", { exact: true })).toBeVisible();
+  expect(edits).toHaveLength(1);
+  expect(edits[0].path).toBe("/api/v1/studios/by-name/Yoga%20Room");
+  expect(edits[0].body.location).toBe("Koramangala, Bangalore");
+  await expect(page.locator(".managed-studio").filter({ hasText: "Practice Room" }).getByText("Bengaluru", { exact: true })).toBeVisible();
+  await secondPanel.getByRole("button", { name: "Manage availability", exact: true }).click();
+  await expect.poll(() => availabilityReads).toBe(1);
+  await expect(secondPanel.getByRole("button", { name: "Add unavailable time" })).toBeVisible();
+  await withinViewport(page);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Yoga Room", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Practice Room", exact: true })).toBeVisible();
+  expect(api.unexpected).toEqual([]);
+});
