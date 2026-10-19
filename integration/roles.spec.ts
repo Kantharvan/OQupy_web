@@ -94,6 +94,10 @@ test("instructor requests a public class, owner approves, student enrollment per
     await expect(
       student.page.getByRole("button", { name: "Enrolled ✓" }),
     ).toBeDisabled();
+    await student.page.reload();
+    await expect(
+      student.page.getByRole("button", { name: "Enrolled ✓", exact: true }),
+    ).toBeDisabled();
     const session = await request.post(`${api}/auth/refresh`, {
       data: { refreshToken: student.user.refresh },
     });
