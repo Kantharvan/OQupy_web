@@ -110,6 +110,7 @@ test("mobile booking reaches PostgreSQL, owner approval reaches the customer, an
       .locator(".session-card")
       .filter({ hasText: "Real backend rehearsal" });
     await expect(customerCard).toContainText("Confirmed");
+    await customer.screenshot({ path: "test-results/mvp-flows/cancel-booking-mobile.png", fullPage: true });
     const busy = await request.get(
       `${api}/studios/${fixture.studio.id}/availability?date=${fixture.date}`,
     );
@@ -118,17 +119,11 @@ test("mobile booking reaches PostgreSQL, owner approval reaches the customer, an
         expect.objectContaining({ kind: "booking", start: booking.dateTime }),
       ]),
     );
-    // Cancellation exists in the API; the current customer dashboard has no cancel button.
-    const session = await request.post(`${api}/auth/refresh`, {
-      data: { refreshToken: student.refresh },
-    });
-    expect(session.ok()).toBe(true);
-    const access = (await session.json()).accessToken;
-    const cancelled = await request.patch(
-      `${api}/bookings/${booking.id}/cancel`,
-      { headers: { Authorization: `Bearer ${access}` } },
-    );
-    expect(cancelled.ok()).toBe(true);
+    customer.once("dialog", (dialog) => dialog.accept());
+    await customerCard
+      .getByRole("button", { name: "Cancel booking", exact: true })
+      .click();
+    await expect(customerCard).toContainText("Cancelled");
     await customer.reload();
     await expect(customerCard).toContainText("Cancelled");
     const freed = await request.get(

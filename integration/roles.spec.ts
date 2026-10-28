@@ -128,6 +128,32 @@ test("instructor requests a public class, owner approves, student enrollment per
         })
       ).status(),
     ).toBe(409);
+    await student.page.goto("/dashboard/classes");
+    const enrolledClass = student.page
+      .locator(".session-card")
+      .filter({ hasText: "Integration public class" });
+    await expect(enrolledClass).toBeVisible();
+    await student.page.reload();
+    await expect(enrolledClass).toContainText("Confirmed");
+    await student.page.screenshot({ path: "test-results/mvp-flows/my-classes-mobile.png", fullPage: true });
+    student.page.once("dialog", (dialog) => dialog.accept());
+    await enrolledClass
+      .getByRole("button", { name: "Withdraw", exact: true })
+      .click();
+    await expect(enrolledClass).toHaveCount(0);
+    await student.page.reload();
+    await expect(
+      student.page.getByText("No class enrollments yet."),
+    ).toBeVisible();
+    const withdrawn = await request.get(
+      `${api}/enrollments/student/${student.user.id}`,
+      { headers },
+    );
+    expect(
+      (await withdrawn.json()).data.some(
+        (e: { bookingId: string }) => e.bookingId === booking.id,
+      ),
+    ).toBe(false);
   } finally {
     await Promise.all([
       instructor.context.close(),
@@ -282,13 +308,11 @@ test("owner delegates studio operations and revokes manager access without chang
       owner.page.getByText(manager.user.email, { exact: false }),
     ).toBeVisible();
     await manager.page.goto("/dashboard/managed");
-    const card = manager.page
-      .locator("article")
-      .filter({
-        has: manager.page.getByRole("heading", {
-          name: "Manager approval journey",
-        }),
-      });
+    const card = manager.page.locator("article").filter({
+      has: manager.page.getByRole("heading", {
+        name: "Manager approval journey",
+      }),
+    });
     await card.getByRole("button", { name: "Approve", exact: true }).click();
     await expect(card.getByText("Confirmed", { exact: true })).toBeVisible();
     const saved = await request.get(`${api}/bookings/${bookingId}`, {

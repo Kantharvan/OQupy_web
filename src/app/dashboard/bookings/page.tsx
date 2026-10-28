@@ -195,6 +195,23 @@ function BookingsContent() {
                       Decline
                     </button>
                   </div>
+                ) : (b.status === "AwaitingApproval" ||
+                    b.status === "Confirmed") &&
+                  (owner || b.bookedBy === user?.id) ? (
+                  <button
+                    className="button-danger"
+                    disabled={!!actionId}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          "Cancel this booking? The reserved time will be released.",
+                        )
+                      )
+                        void decide(b.id, false);
+                    }}
+                  >
+                    {actionId === b.id ? "Cancelling…" : "Cancel booking"}
+                  </button>
                 ) : undefined
               }
             />

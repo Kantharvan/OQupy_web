@@ -64,3 +64,9 @@ The separate full-stack CI suite exercises real-backend role journeys against di
 ## Delegated studio management
 
 [Studio managers](studio-managers.md) use `/dashboard/managed` to operate assigned studios while retaining their personal account role. Owners assign/remove managers from My studios. Manager booking decisions and availability use the existing API endpoints with studio-scoped authorization; listing and access controls stay owner-only.
+
+## MVP cancellation and enrolled classes
+
+Bookers can cancel pending or confirmed personal bookings from Bookings after a confirmation prompt. Owners can also cancel confirmed bookings in their own studios; manager permissions are unchanged. Completed/cancelled bookings have no cancel action. The screen uses the server response and retains the booking on failure.
+
+`/dashboard/classes` lists all pages of the current account's enrollments, including cancelled class statuses. Withdrawal asks for confirmation and removes the item only after the server succeeds. Empty successful API responses are supported for deletion endpoints. Cancelled classes remain visible until withdrawn; no refund or payment action is implied.

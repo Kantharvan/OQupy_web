@@ -100,5 +100,6 @@ export async function apiRequest<T>(
     throw new Error(error.message ?? "Request failed");
   }
 
-  return res.json() as Promise<T>;
+  const body = await res.text();
+  return body.trim() ? (JSON.parse(body) as T) : (undefined as T);
 }
