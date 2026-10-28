@@ -1,6 +1,6 @@
 # Browser → real backend booking test
 
-These tests supplement the mocked Playwright suite. It drives the mobile UI through a custom booking request, owner approval and customer confirmation using a real local Nest API, PostgreSQL and Redis. It then cancels via the API and verifies the UI status and released availability. Customer cancellation currently has no dashboard button.
+These tests supplement the mocked Playwright suite. It drives the mobile UI through a custom booking request, owner approval and customer confirmation using a real local Nest API, PostgreSQL and Redis. It then cancels through the customer dashboard and verifies persisted status and released availability. The class journey also verifies My classes, withdrawal and persistence after reload.
 
 ## Prerequisites
 
